@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
     <footer className="bg-surface-container w-full py-xl mt-auto">
@@ -10,9 +12,9 @@ export default function Footer() {
           <a className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" href="#">
             About Us
           </a>
-          <a className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" href="#">
+          <Link className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" to="/vendor">
             Sell on NearBasket
-          </a>
+          </Link>
           <a className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" href="#">
             Download App
           </a>

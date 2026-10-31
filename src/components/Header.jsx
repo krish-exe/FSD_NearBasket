@@ -25,6 +25,7 @@ export default function Header() {
   const [locationSearch, setLocationSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
   const { user, isLoggedIn, logout } = useAuth();
   const { itemCount, openCart } = useCart();
@@ -169,7 +170,11 @@ export default function Header() {
     e.target.value = ""; // allow picking the same photo again
     if (!file) return;
     const term = searchTermFromImage(file);
-    if (!term) return;
+    if (!term) {
+      setPhotoMessage("Couldn't recognise that photo. Try typing the item name instead.");
+      return;
+    }
+    setPhotoMessage("");
     setSearchQuery(term);
     setIsSearchFocused(false);
     navigate(`/deals?search=${encodeURIComponent(term)}`);
@@ -215,7 +220,7 @@ export default function Header() {
             </button>
 
             {locationOpen && (
-              <div className="fixed inset-x-3 top-18 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 w-auto sm:w-84 md:w-96 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 p-4 space-y-3">
+              <div className="fixed inset-x-3 top-18 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 w-auto sm:w-80 md:w-96 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 p-4 space-y-3">
                 <div className="flex justify-between items-center pb-2 border-b border-outline-variant/30">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="text-primary" size={18} />
@@ -319,6 +324,7 @@ export default function Header() {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setIsSearchFocused(true);
+                setPhotoMessage("");
               }}
               onFocus={() => setIsSearchFocused(true)}
             />
@@ -370,6 +376,7 @@ export default function Header() {
                 : "Couldn't hear that, try again."}
             </p>
           )}
+          {photoMessage && <p className="absolute mt-1 text-[11px] text-error font-body">{photoMessage}</p>}
 
           {/* Autocomplete Dropdown */}
           {isSearchFocused && searchQuery.trim().length > 0 && (

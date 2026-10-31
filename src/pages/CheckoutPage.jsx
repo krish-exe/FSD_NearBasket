@@ -1,28 +1,26 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ShieldCheck, MapPin, CreditCard, Tag, ArrowRight, ShoppingBasket, CheckCircle2, AlertCircle } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { useCart, FREE_DELIVERY_FROM } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useOrders } from "../context/OrderContext";
+import { useDeliveryLocation } from "../hooks/useDeliveryLocation";
+import DeliveryHeader from "../components/DeliveryHeader";
 
 export default function CheckoutPage() {
-  const { cartItems, subtotal, deliveryFee, appliedOffer, discountAmount, offerShortfall, total, clearCart, applyOffer, removeOffer } = useCart();
+  const { cartItems, deliveries, subtotal, deliveryFee, appliedOffer, discountAmount, offerShortfall, total, clearCart, applyOffer, removeOffer } = useCart();
   const { user } = useAuth();
-  const { placeOrder } = useOrders();
+  const { placeOrders } = useOrders();
   const navigate = useNavigate();
+  const deliveryArea = useDeliveryLocation();
 
-  const [form, setForm] = useState(() => {
-    const savedLocation = localStorage.getItem("nearbasket_location");
-    return {
-      name: user?.name || "Priya Patel",
-      email: user?.email || "priya@example.com",
-      phone: "9876543210",
-      address: savedLocation
-        ? `Flat 402, Sunshine Apartments, ${savedLocation}`
-        : "Flat 402, Sunshine Apartments, 100ft Rd, Indiranagar, Bengaluru - 560038",
-      paymentMethod: "Cash on Delivery",
-    };
-  });
+  // Prefilled only from the shopper's own account; the street address is theirs to enter
+  const [form, setForm] = useState(() => ({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    address: "",
+    paymentMethod: "Cash on Delivery",
+  }));
 
   const [errors, setErrors] = useState({});
   const [promoInput, setPromoInput] = useState("");
@@ -83,21 +81,18 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     setTimeout(() => {
-      const placed = placeOrder({
-        customerName: form.name,
-        email: form.email,
-        address: form.address,
+      const placed = placeOrders({
+        customerName: form.name.trim(),
+        email: user?.email,
+        address: `${form.address.trim()}, ${deliveryArea}`,
         paymentMethod: form.paymentMethod,
-        cartItems,
-        subtotal,
-        deliveryFee,
-        discount: discountAmount,
-        total,
+        deliveries,
         offerCode: appliedOffer?.code || null,
       });
 
       clearCart();
-      navigate(`/orders?newOrderId=${encodeURIComponent(placed.id)}`, { replace: true });
+      const ids = placed.map((order) => order.id).join(",");
+      navigate(`/orders?newOrderIds=${encodeURIComponent(ids)}`, { replace: true });
     }, 600);
   };
 
@@ -152,7 +147,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="sm:col-span-2 space-y-1">
-                <label className="font-label text-label-md text-on-surface-variant">Complete Address *</label>
+                <label className="font-label text-label-md text-on-surface-variant">House / Flat and Street *</label>
                 <textarea
                   rows={3}
                   value={form.address}
@@ -160,9 +155,14 @@ export default function CheckoutPage() {
                   className={`w-full px-4 py-2.5 bg-surface-container-low border rounded-md font-body text-body-md focus:outline-none focus:ring-2 focus:ring-primary ${
                     errors.address ? "border-error focus:ring-error" : "border-outline-variant"
                   }`}
-                  placeholder="House/Flat No., Building Name, Street, Locality"
+                  placeholder="House/Flat No., Building Name, Street"
                 />
                 {errors.address && <span className="font-body text-body-sm text-error">{errors.address}</span>}
+                <p className="font-body text-body-sm text-on-surface-variant flex flex-wrap items-center gap-1">
+                  <MapPin size={14} className="text-primary shrink-0" />
+                  Delivery area: <strong className="text-on-surface">{deliveryArea}</strong>
+                  <span>(change it from the location menu at the top)</span>
+                </p>
               </div>
             </div>
           </div>
@@ -228,20 +228,27 @@ export default function CheckoutPage() {
             Order Summary
           </h2>
 
-          {/* Cart Items List */}
-          <div className="divide-y divide-outline-variant/20 max-h-64 overflow-y-auto pr-1">
-            {cartItems.map(({ product, qty }) => (
-              <div key={product.id} className="py-sm flex items-center justify-between gap-md">
-                <div className="flex items-center gap-sm">
-                  <img src={product.image} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
-                  <div>
-                    <p className="font-body text-body-sm font-semibold text-on-surface line-clamp-1">{product.name}</p>
-                    <p className="font-body text-body-sm text-on-surface-variant">Qty: {qty}</p>
-                  </div>
+          {/* Cart Items, one group per store delivery */}
+          <div className="space-y-md max-h-80 overflow-y-auto pr-1">
+            {deliveries.map((delivery, index) => (
+              <div key={delivery.storeId} className="space-y-xs">
+                <DeliveryHeader delivery={delivery} index={index} count={deliveries.length} />
+                <div className="divide-y divide-outline-variant/20">
+                  {delivery.items.map(({ product, qty }) => (
+                    <div key={product.id} className="py-sm flex items-center justify-between gap-md">
+                      <div className="flex items-center gap-sm">
+                        <img src={product.image} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
+                        <div>
+                          <p className="font-body text-body-sm font-semibold text-on-surface line-clamp-1">{product.name}</p>
+                          <p className="font-body text-body-sm text-on-surface-variant">Qty: {qty}</p>
+                        </div>
+                      </div>
+                      <span className="font-label text-label-md font-bold text-on-surface">
+                        Rs. {(product.price * qty).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <span className="font-label text-label-md font-bold text-on-surface">
-                  Rs. {(product.price * qty).toFixed(2)}
-                </span>
               </div>
             ))}
           </div>
@@ -315,9 +322,16 @@ export default function CheckoutPage() {
             )}
 
             <div className="flex justify-between text-on-surface-variant">
-              <span>Delivery Charges</span>
+              <span>
+                Delivery Charges{deliveries.length > 1 && ` (${deliveries.length} deliveries)`}
+              </span>
               <span>{deliveryFee === 0 ? <span className="text-primary font-bold">FREE</span> : `Rs. ${deliveryFee.toFixed(2)}`}</span>
             </div>
+            {deliveryFee > 0 && (
+              <p className="text-[12px] text-on-surface-variant text-right">
+                Add Rs. {(FREE_DELIVERY_FROM - subtotal).toFixed(0)} more for free delivery from every store
+              </p>
+            )}
 
             <div className="flex justify-between font-display text-headline-sm text-on-surface pt-2 border-t border-outline-variant/30">
               <span>Total Payable</span>

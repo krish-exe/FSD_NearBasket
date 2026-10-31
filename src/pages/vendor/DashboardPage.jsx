@@ -1,25 +1,78 @@
 import { Link } from "react-router-dom";
 import { ShoppingCart, AlertTriangle, Wallet } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
-import { recentOrders, popularProducts } from "../../data/mockData";
-
-const STAT_CARDS = [
-  { label: "Active Orders", value: "12", badge: "Updated just now", icon: ShoppingCart, iconBg: "bg-tertiary-fixed", iconFg: "text-tertiary" },
-  { label: "Low Stock Alerts", value: "5 Items", badge: null, icon: AlertTriangle, iconBg: "bg-error-container", iconFg: "text-error", valueColor: "text-error" },
-  { label: "Today's Revenue", value: "Rs. 1,240", badge: "+14% vs yesterday", icon: Wallet, iconBg: "bg-primary-fixed", iconFg: "text-on-primary-fixed-variant" },
-];
+import { products, vendorStoreId } from "../../data/mockData";
+import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
+import { useVendorOrders, unitCount } from "../../hooks/useVendorOrders";
+import { useNow } from "../../hooks/useNow";
+import { getOrderStatus, ACTIVE_STATUSES } from "../../utils/orderStatus";
+import { loadVendorSettings } from "../../utils/vendorSettings";
 
 export default function DashboardPage() {
+  const orders = useVendorOrders();
+  const { stockFor } = useInventory();
+  const now = useNow();
+  const { shopName } = loadVendorSettings();
+
+  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(getOrderStatus(o, now)));
+  const today = new Date(now).toDateString();
+  const todaysOrders = orders.filter((o) => new Date(o.date).toDateString() === today);
+  const todaysRevenue = todaysOrders.reduce((sum, o) => sum + o.total, 0);
+  const lowStockCount = products.filter((p) => {
+    const left = stockFor(p.id);
+    return p.storeId === vendorStoreId && left !== null && left <= LOW_STOCK_THRESHOLD;
+  }).length;
+
+  // Units sold per product across all of this store's orders
+  const soldByProduct = {};
+  orders.forEach((o) =>
+    o.items.forEach(({ product, qty }) => {
+      soldByProduct[product.id] = { name: product.name, sold: (soldByProduct[product.id]?.sold || 0) + qty };
+    })
+  );
+  const popularProducts = Object.values(soldByProduct)
+    .sort((a, b) => b.sold - a.sold)
+    .slice(0, 4);
+  const topSold = popularProducts[0]?.sold || 1;
+
+  const statCards = [
+    {
+      label: "Active Orders",
+      value: String(activeOrders.length),
+      badge: null,
+      icon: ShoppingCart,
+      iconBg: "bg-tertiary-fixed",
+      iconFg: "text-tertiary",
+    },
+    {
+      label: "Low Stock Alerts",
+      value: `${lowStockCount} ${lowStockCount === 1 ? "Item" : "Items"}`,
+      badge: null,
+      icon: AlertTriangle,
+      iconBg: "bg-error-container",
+      iconFg: "text-error",
+      valueColor: lowStockCount > 0 ? "text-error" : undefined,
+    },
+    {
+      label: "Today's Revenue",
+      value: `Rs. ${todaysRevenue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`,
+      badge: `${todaysOrders.length} ${todaysOrders.length === 1 ? "order" : "orders"} today`,
+      icon: Wallet,
+      iconBg: "bg-primary-fixed",
+      iconFg: "text-on-primary-fixed-variant",
+    },
+  ];
+
   return (
     <div className="space-y-xl">
       <div>
-        <h1 className="font-display text-display-lg-mobile text-on-surface mb-xs">Welcome back, Sharma General Store</h1>
+        <h1 className="font-display text-display-lg-mobile text-on-surface mb-xs">Welcome back, {shopName}</h1>
         <p className="font-body text-body-lg text-on-surface-variant">Here's what's happening in your neighborhood market today.</p>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-lg">
-        {STAT_CARDS.map(({ label, value, badge, icon: Icon, iconBg, iconFg, valueColor }) => (
+        {statCards.map(({ label, value, badge, icon: Icon, iconBg, iconFg, valueColor }) => (
           <div key={label} className="bg-surface-container-lowest rounded-md p-lg shadow-card">
             <div className="flex justify-between items-start mb-md">
               <div className={`w-11 h-11 rounded-md flex items-center justify-center ${iconBg} ${iconFg}`}>
@@ -56,14 +109,21 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="bg-surface-container-lowest">
-                {recentOrders.map((order) => (
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-lg py-xl text-center font-body text-body-md text-on-surface-variant">
+                      No orders yet.
+                    </td>
+                  </tr>
+                )}
+                {orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="border-b border-outline-variant/10 last:border-0">
                     <td className="px-lg py-md font-label text-label-md text-primary">{order.id}</td>
                     <td className="px-lg py-md font-body text-body-md text-on-surface">{order.customer}</td>
-                    <td className="px-lg py-md font-body text-body-md text-on-surface-variant">{order.items}</td>
-                    <td className="px-lg py-md font-body text-body-md text-on-surface">{order.total}</td>
+                    <td className="px-lg py-md font-body text-body-md text-on-surface-variant">{unitCount(order)} items</td>
+                    <td className="px-lg py-md font-body text-body-md text-on-surface">Rs. {order.total.toFixed(2)}</td>
                     <td className="px-lg py-md">
-                      <StatusBadge status={order.status} />
+                      <StatusBadge status={getOrderStatus(order, now)} />
                     </td>
                   </tr>
                 ))}
@@ -75,19 +135,23 @@ export default function DashboardPage() {
         {/* Popular Products */}
         <div className="bg-surface-container-low rounded-md p-lg shadow-card space-y-lg">
           <h2 className="font-display text-headline-sm text-on-surface">Popular Products</h2>
-          <div className="space-y-md">
-            {popularProducts.map((p) => (
-              <div key={p.name}>
-                <div className="flex justify-between font-body text-body-sm text-on-surface mb-1">
-                  <span>{p.name}</span>
-                  <span className="text-on-surface-variant shrink-0 ml-2">{p.sold} sold</span>
+          {popularProducts.length === 0 ? (
+            <p className="font-body text-body-sm text-on-surface-variant">Best sellers will show up once orders come in.</p>
+          ) : (
+            <div className="space-y-md">
+              {popularProducts.map((p) => (
+                <div key={p.name}>
+                  <div className="flex justify-between font-body text-body-sm text-on-surface mb-1">
+                    <span>{p.name}</span>
+                    <span className="text-on-surface-variant shrink-0 ml-2">{p.sold} sold</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${(p.sold / topSold) * 100}%` }} />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${p.pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <Link
             to="/vendor/inventory"
             className="w-full block text-center py-2.5 border border-outline-variant rounded-full font-label text-label-md text-on-surface hover:bg-surface-container-high transition-colors"

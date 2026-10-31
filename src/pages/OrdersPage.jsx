@@ -5,22 +5,26 @@ import { useOrders } from "../context/OrderContext";
 import { useCart } from "../context/CartContext";
 import StatusBadge from "../components/StatusBadge";
 import { products as catalog } from "../data/mockData";
+import { getOrderStatus } from "../utils/orderStatus";
+import { useNow } from "../hooks/useNow";
 
 export default function OrdersPage() {
   const [searchParams] = useSearchParams();
-  const newOrderId = searchParams.get("newOrderId");
+  const newOrderIds = searchParams.get("newOrderIds")?.split(",").filter(Boolean) || [];
   const { orders } = useOrders();
-  const { addToCart, openCart } = useCart();
+  const { addItems, openCart } = useCart();
+  const now = useNow();
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [reorderedId, setReorderedId] = useState(null);
 
   const handleReorder = (order) => {
-    order.items.forEach(({ product, qty }) => {
-      // Order history stores a trimmed snapshot; re-add the full catalog product when it still exists
-      const current = catalog.find((p) => p.id === product.id) || product;
-      addToCart(current, qty);
-    });
+    // Order history stores a trimmed snapshot; re-add the full catalog product when it still exists
+    const items = order.items.map(({ product, qty }) => ({
+      product: catalog.find((p) => p.id === product.id) || product,
+      qty,
+    }));
+    addItems(items);
     setReorderedId(order.id);
     setTimeout(() => {
       setReorderedId(null);
@@ -50,14 +54,20 @@ export default function OrdersPage() {
       </div>
 
       {/* New Order Placed Toast Banner */}
-      {newOrderId && (
+      {newOrderIds.length > 0 && (
         <div className="bg-primary/10 border border-primary/30 rounded-lg p-md flex items-center justify-between text-primary font-label text-label-md animate-in fade-in">
           <div className="flex items-center gap-md">
             <CheckCircle2 size={24} className="shrink-0" />
             <div>
-              <p className="font-bold">Order Placed Successfully! (ID: {newOrderId})</p>
+              <p className="font-bold">
+                {newOrderIds.length > 1
+                  ? `Order Placed Successfully! ${newOrderIds.length} deliveries (IDs: ${newOrderIds.join(", ")})`
+                  : `Order Placed Successfully! (ID: ${newOrderIds[0]})`}
+              </p>
               <p className="font-body text-body-sm text-on-surface-variant">
-                Your neighborhood store is preparing your delivery right now.
+                {newOrderIds.length > 1
+                  ? "Each store is preparing its part of your order and will deliver it separately."
+                  : "Your neighborhood store is preparing your delivery right now."}
               </p>
             </div>
           </div>
@@ -96,7 +106,7 @@ export default function OrdersPage() {
                     <span className="font-display text-headline-sm font-bold text-on-surface">
                       {order.id}
                     </span>
-                    <StatusBadge status={order.status} />
+                    <StatusBadge status={getOrderStatus(order, now)} />
                   </div>
                   <p className="font-body text-body-sm text-on-surface-variant flex items-center gap-1">
                     <Clock size={14} /> Placed on {order.formattedDate} • Store: <strong>{order.storeName}</strong>
@@ -184,7 +194,7 @@ export default function OrdersPage() {
             <div className="space-y-md max-h-96 overflow-y-auto pr-1">
               <div className="flex justify-between items-center bg-surface-container-low p-md rounded-lg">
                 <span className="font-label text-label-md text-on-surface">Order Status</span>
-                <StatusBadge status={selectedOrder.status} />
+                <StatusBadge status={getOrderStatus(selectedOrder, now)} />
               </div>
 
               <div className="space-y-sm">

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, ShoppingBasket, Plus, Minus, Trash2, Tag, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
-import { useCart } from "../context/CartContext";
+import { useCart, FREE_DELIVERY_FROM } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import DeliveryHeader from "./DeliveryHeader";
 
 export default function CartDrawer() {
   const {
     cartItems,
+    deliveries,
     itemCount,
     subtotal,
     deliveryFee,
@@ -102,50 +104,57 @@ export default function CartDrawer() {
         ) : (
           <>
             {/* Items List */}
-            <div className="flex-grow overflow-y-auto p-lg space-y-md divide-y divide-outline-variant/20">
-              {cartItems.map(({ product, qty }) => (
-                <div key={product.id} className="pt-md first:pt-0 flex gap-md items-center">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-16 h-16 rounded-md object-cover border border-outline-variant/30 shrink-0"
-                  />
-                  <div className="flex-grow min-w-0">
-                    <h4 className="font-body text-body-md font-semibold text-on-surface truncate">
-                      {product.name}
-                    </h4>
-                    <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
-                    <div className="font-label text-label-md font-bold text-primary mt-1">
-                      Rs. {product.price.toFixed(2)}
-                    </div>
-                  </div>
+            <div className="flex-grow overflow-y-auto p-lg space-y-lg">
+              {deliveries.map((delivery, index) => (
+                <div key={delivery.storeId} className="space-y-md">
+                  <DeliveryHeader delivery={delivery} index={index} count={deliveries.length} />
+                  <div className="space-y-md divide-y divide-outline-variant/20">
+                    {delivery.items.map(({ product, qty }) => (
+                      <div key={product.id} className="pt-md first:pt-0 flex gap-md items-center">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-16 h-16 rounded-md object-cover border border-outline-variant/30 shrink-0"
+                        />
+                        <div className="flex-grow min-w-0">
+                          <h4 className="font-body text-body-md font-semibold text-on-surface truncate">
+                            {product.name}
+                          </h4>
+                          <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
+                          <div className="font-label text-label-md font-bold text-primary mt-1">
+                            Rs. {product.price.toFixed(2)}
+                          </div>
+                        </div>
 
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <button
-                      onClick={() => removeFromCart(product.id)}
-                      className="text-on-surface-variant hover:text-error transition-colors p-1"
-                      title="Remove item"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <button
+                            onClick={() => removeFromCart(product.id)}
+                            className="text-on-surface-variant hover:text-error transition-colors p-1"
+                            title="Remove item"
+                          >
+                            <Trash2 size={16} />
+                          </button>
 
-                    <div className="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1 border border-outline-variant/30">
-                      <button
-                        onClick={() => updateQuantity(product.id, qty - 1)}
-                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="font-label text-label-md font-bold text-on-surface w-5 text-center">
-                        {qty}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(product.id, qty + 1)}
-                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
+                          <div className="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1 border border-outline-variant/30">
+                            <button
+                              onClick={() => updateQuantity(product.id, qty - 1)}
+                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="font-label text-label-md font-bold text-on-surface w-5 text-center">
+                              {qty}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(product.id, qty + 1)}
+                              className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -227,9 +236,14 @@ export default function CartDrawer() {
                 )}
 
                 <div className="flex justify-between text-on-surface-variant">
-                  <span>Delivery Fee</span>
+                  <span>Delivery Fee{deliveries.length > 1 && ` (${deliveries.length} deliveries)`}</span>
                   <span>{deliveryFee === 0 ? <span className="text-primary font-bold">FREE</span> : `Rs. ${deliveryFee.toFixed(2)}`}</span>
                 </div>
+                {deliveryFee > 0 && (
+                  <p className="text-[12px] text-on-surface-variant text-right">
+                    Add Rs. {(FREE_DELIVERY_FROM - subtotal).toFixed(0)} more for free delivery from every store
+                  </p>
+                )}
 
                 <div className="flex justify-between font-display text-headline-sm text-on-surface pt-2 border-t border-outline-variant/30">
                   <span>Total Amount</span>

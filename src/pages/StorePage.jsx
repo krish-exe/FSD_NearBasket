@@ -4,6 +4,7 @@ import { Star, Map, Plus, Minus, ShoppingBasket, Search, ArrowRight } from "luci
 import { stores as mockStores, products as mockProducts, categories as globalCategories } from "../data/mockData";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useInventory, LOW_STOCK_THRESHOLD } from "../context/InventoryContext";
 import NotFoundPage from "./NotFoundPage";
 
 export default function StorePage() {
@@ -19,6 +20,7 @@ export default function StorePage() {
 
   const {
     cartItems,
+    deliveries,
     subtotal,
     deliveryFee,
     appliedOffer,
@@ -29,6 +31,7 @@ export default function StorePage() {
   } = useCart();
 
   const { isLoggedIn } = useAuth();
+  const { stockFor } = useInventory();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -182,6 +185,9 @@ export default function StorePage() {
               {storeProductsList.map((product) => {
                 const qtyInCart = getCartQuantity(product.id);
                 const isHighlighted = highlightedProductId === product.id;
+                const stockLeft = stockFor(product.id);
+                const isSoldOut = stockLeft === 0;
+                const atStockLimit = stockLeft !== null && qtyInCart >= stockLeft;
 
                 return (
                   <div
@@ -204,7 +210,12 @@ export default function StorePage() {
                         <h3 className="font-display text-headline-sm text-on-surface font-bold line-clamp-1">
                           {product.name}
                         </h3>
-                        <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
+                        <p className="font-body text-body-sm text-on-surface-variant">
+                          {product.unit}
+                          {stockLeft > 0 && stockLeft <= LOW_STOCK_THRESHOLD && (
+                            <span className="text-secondary font-semibold"> · Only {stockLeft} left</span>
+                          )}
+                        </p>
                       </div>
 
                       <div className="flex items-center justify-between pt-xs">
@@ -212,7 +223,7 @@ export default function StorePage() {
                           <span className="font-display text-headline-sm text-primary font-bold">
                             Rs. {product.price.toFixed(2)}
                           </span>
-                          {product.originalPrice && (
+                          {product.originalPrice > product.price && (
                             <span className="font-body text-body-sm text-on-surface-variant line-through ml-2">
                               Rs. {product.originalPrice}
                             </span>
@@ -232,11 +243,17 @@ export default function StorePage() {
                             </span>
                             <button
                               onClick={() => addToCart(product, 1)}
-                              className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                              disabled={atStockLimit}
+                              title={atStockLimit ? "No more in stock" : undefined}
+                              className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Plus size={14} />
                             </button>
                           </div>
+                        ) : isSoldOut ? (
+                          <span className="px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label text-label-md">
+                            Out of stock
+                          </span>
                         ) : (
                           <button
                             onClick={() => addToCart(product, 1)}
@@ -317,7 +334,7 @@ export default function StorePage() {
                 </div>
               )}
               <div className="flex justify-between text-on-surface-variant">
-                <span>Delivery Charges</span>
+                <span>Delivery Charges{deliveries.length > 1 && ` (${deliveries.length} stores)`}</span>
                 <span>{deliveryFee === 0 ? <span className="text-primary font-bold">FREE</span> : `Rs. ${deliveryFee.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between font-display text-headline-sm text-on-surface pt-2 border-t border-outline-variant/30 font-bold">

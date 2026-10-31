@@ -18,6 +18,7 @@ import InventoryPage from "./pages/vendor/InventoryPage";
 import VendorOrdersPage from "./pages/vendor/OrdersPage";
 import SettingsPage from "./pages/vendor/SettingsPage";
 
+import { InventoryProvider } from "./context/InventoryContext";
 import { CartProvider } from "./context/CartContext";
 import { OrderProvider } from "./context/OrderContext";
 
@@ -34,28 +35,30 @@ function CustomerShell({ children }) {
 
 export default function App() {
   return (
-    <CartProvider>
-      <OrderProvider>
-        <Routes>
-          <Route path="/" element={<CustomerShell><HomePage /></CustomerShell>} />
-          <Route path="/store/:storeId" element={<CustomerShell><StorePage /></CustomerShell>} />
-          <Route path="/deals" element={<CustomerShell><DealsPage /></CustomerShell>} />
-          <Route path="/offers" element={<CustomerShell><OffersPage /></CustomerShell>} />
-          <Route path="/orders" element={<CustomerShell><OrdersPage /></CustomerShell>} />
-          <Route path="/checkout" element={<CustomerShell><RequireAuth><CheckoutPage /></RequireAuth></CustomerShell>} />
-          <Route path="/login" element={<CustomerShell><LoginPage /></CustomerShell>} />
-          <Route path="/signup" element={<CustomerShell><SignupPage /></CustomerShell>} />
+    <InventoryProvider>
+      <CartProvider>
+        <OrderProvider>
+          <Routes>
+            <Route path="/" element={<CustomerShell><HomePage /></CustomerShell>} />
+            <Route path="/store/:storeId" element={<CustomerShell><StorePage /></CustomerShell>} />
+            <Route path="/deals" element={<CustomerShell><DealsPage /></CustomerShell>} />
+            <Route path="/offers" element={<CustomerShell><OffersPage /></CustomerShell>} />
+            <Route path="/orders" element={<CustomerShell><OrdersPage /></CustomerShell>} />
+            <Route path="/checkout" element={<CustomerShell><RequireAuth><CheckoutPage /></RequireAuth></CustomerShell>} />
+            <Route path="/login" element={<CustomerShell><LoginPage /></CustomerShell>} />
+            <Route path="/signup" element={<CustomerShell><SignupPage /></CustomerShell>} />
 
-          <Route path="/vendor" element={<VendorLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="orders" element={<VendorOrdersPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            <Route path="/vendor" element={<VendorLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="orders" element={<VendorOrdersPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
-          <Route path="*" element={<CustomerShell><NotFoundPage /></CustomerShell>} />
-        </Routes>
-      </OrderProvider>
-    </CartProvider>
+            <Route path="*" element={<CustomerShell><NotFoundPage /></CustomerShell>} />
+          </Routes>
+        </OrderProvider>
+      </CartProvider>
+    </InventoryProvider>
   );
 }

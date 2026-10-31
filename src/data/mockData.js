@@ -16,7 +16,7 @@ export const stores = [
     reviews: 340,
     distance: "800m away",
     delivery: "Delivery in 20-25 mins",
-    status: "open",
+    hours: { open: "07:00", close: "21:00" },
     address: "102 Indiranagar 100ft Rd, Bengaluru",
     banner: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800&auto=format&fit=crop",
@@ -28,7 +28,7 @@ export const stores = [
     reviews: 210,
     distance: "450m away",
     delivery: "Delivery in 15-20 mins",
-    status: "open",
+    hours: { open: "08:00", close: "22:00" },
     address: "45 HAL 2nd Stage, Bengaluru",
     banner: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?q=80&w=800&auto=format&fit=crop",
@@ -40,7 +40,7 @@ export const stores = [
     reviews: 156,
     distance: "1.2km away",
     delivery: "Delivery in 30 mins",
-    status: "open",
+    hours: { open: "06:00", close: "23:00" },
     address: "78 Koramangala 4th Block, Bengaluru",
     banner: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=800&auto=format&fit=crop",
@@ -52,7 +52,7 @@ export const stores = [
     reviews: 268,
     distance: "600m away",
     delivery: "Delivery in 18 mins",
-    status: "open",
+    hours: { open: "09:00", close: "21:30" },
     address: "12 CMH Road, Indiranagar, Bengaluru",
     banner: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=800&auto=format&fit=crop",
@@ -572,39 +572,20 @@ export const offers = [
   }
 ];
 
-export const inventoryItems = [
-  {
-    id: "VEG-001",
-    name: "Organic Asparagus",
-    subtitle: "Local farm",
-    category: "Produce",
-    price: "Rs. 249",
-    stock: 45,
-    status: "Active",
-    image: "https://images.unsplash.com/photo-1515471209610-2b0c229d3128?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "BAK-042",
-    name: "Artisan Sourdough",
-    subtitle: "Fresh baked daily",
-    category: "Bakery",
-    price: "Rs. 149",
-    stock: 2,
-    status: "Low Stock",
-    warning: true,
-    image: "https://images.unsplash.com/photo-1585478259715-4d3a5f5b8b9a?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "PAN-112",
-    name: "Local Honey (16oz)",
-    subtitle: "Wildflower blend",
-    category: "Pantry",
-    price: "Rs. 320",
-    stock: 18,
-    status: "Draft",
-    image: null,
-  },
-];
+// The Vendor Hub is signed in as this store until vendor accounts exist on a backend
+export const vendorStoreId = "sharma-general-store";
+
+// Starting stock for the vendor store's products. Only these products are stock-tracked;
+// other stores' products are treated as always available.
+export const initialStock = {
+  "organic-tomatoes": 40,
+  "paneer-fresh": 3,
+  "whole-wheat-bread": 12,
+  "roasted-almonds": 25,
+  "basmati-rice": 18,
+  "whole-wheat-atta": 0,
+  "surface-cleaner": 9,
+};
 
 export const initialOrders = [
   {
@@ -687,18 +668,4 @@ export const initialOrders = [
     status: "Delivered",
     address: "Flat 402, Sunshine Apartments, Indiranagar, Bengaluru"
   }
-];
-
-export const recentOrders = [
-  { id: "#NB-8492", customer: "Priya Patel", items: "4 items", total: "Rs. 304.00", status: "Pending" },
-  { id: "#NB-8491", customer: "Aiden M.", items: "12 items", total: "Rs. 973.00", status: "Accepted" },
-  { id: "#NB-8490", customer: "Sarah Jenkins", items: "2 items", total: "Rs. 182.50", status: "Accepted" },
-  { id: "#NB-8489", customer: "David L.", items: "6 items", total: "Rs. 459.00", status: "Completed" },
-];
-
-export const popularProducts = [
-  { name: "Organic Bananas (Bunch)", sold: 42, pct: 100 },
-  { name: "Local Whole Milk (1 Litre)", sold: 38, pct: 90 },
-  { name: "Fresh Sourdough Bread", sold: 24, pct: 57 },
-  { name: "Free-Range Brown Eggs", sold: 19, pct: 45 },
 ];

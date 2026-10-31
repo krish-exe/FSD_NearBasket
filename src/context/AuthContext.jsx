@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
       passwordHash: await hashPassword(password, salt),
     };
     saveAccounts(accounts);
-    startSession({ name: accounts[key].name, email: accounts[key].email });
+    startSession({ name: accounts[key].name, email: accounts[key].email, phone: accounts[key].phone });
     return { ok: true };
   };
 
@@ -97,7 +97,7 @@ export function AuthProvider({ children }) {
     if ((await hashPassword(password, account.salt)) !== account.passwordHash) {
       return { ok: false, field: "password", error: "Incorrect password. Please try again." };
     }
-    startSession({ name: account.name, email: account.email });
+    startSession({ name: account.name, email: account.email, phone: account.phone });
     return { ok: true };
   };
 

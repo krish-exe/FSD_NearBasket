@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { initialOrders, stores } from "../data/mockData";
+import { initialOrders } from "../data/mockData";
+import { useInventory } from "./InventoryContext";
 
 const OrderContext = createContext(null);
 
 const ORDERS_STORAGE_KEY = "nearbasket_orders_v1";
 
 export function OrderProvider({ children }) {
+  const { consumeStock } = useInventory();
+
   const [orders, setOrders] = useState(() => {
     try {
       const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
@@ -26,11 +29,10 @@ export function OrderProvider({ children }) {
     }
   }, [orders]);
 
-  const placeOrder = ({ customerName, email, address, paymentMethod, cartItems, subtotal, deliveryFee, discount, total, offerCode }) => {
+  // Places one order per store delivery (see splitIntoDeliveries in CartContext) and returns them
+  const placeOrders = ({ customerName, email, address, paymentMethod, deliveries, offerCode }) => {
     // No leading "#": the id is passed around in URLs, where "#" starts the fragment
-    const newOrderId = `NB-${Date.now().toString().slice(-6)}`;
-    const storeIds = [...new Set(cartItems.map((item) => item.product.storeId).filter(Boolean))];
-    const storeNames = storeIds.map((id) => stores.find((s) => s.id === id)?.name).filter(Boolean);
+    const baseId = `NB-${Date.now().toString().slice(-6)}`;
     const now = new Date();
     const formattedDate = now.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -40,15 +42,16 @@ export function OrderProvider({ children }) {
       minute: "2-digit",
     });
 
-    const newOrder = {
-      id: newOrderId,
+    const newOrders = deliveries.map((delivery, index) => ({
+      id: deliveries.length > 1 ? `${baseId}-${index + 1}` : baseId,
+      checkoutId: baseId,
       date: now.toISOString(),
       formattedDate,
       customer: customerName || "Valued Customer",
       email: email || "customer@example.com",
-      storeName: storeNames.length ? storeNames.join(", ") : "NearBasket Store",
-      storeId: storeIds[0] || null,
-      items: cartItems.map((item) => ({
+      storeName: delivery.storeName,
+      storeId: delivery.storeId,
+      items: delivery.items.map((item) => ({
         product: {
           id: item.product.id,
           name: item.product.name,
@@ -60,19 +63,20 @@ export function OrderProvider({ children }) {
         },
         qty: item.qty,
       })),
-      subtotal,
-      discount,
-      deliveryFee,
-      total,
-      offerCode: offerCode || null,
+      subtotal: delivery.subtotal,
+      discount: delivery.discount,
+      deliveryFee: delivery.deliveryFee,
+      total: delivery.total,
+      offerCode: delivery.discount > 0 ? offerCode : null,
       paymentMethod: paymentMethod || "Cash on Delivery",
       paymentStatus: paymentMethod === "Cash on Delivery" ? "Pending" : "Paid",
       status: "Placed",
       address: address || "Indiranagar, Bengaluru",
-    };
+    }));
 
-    setOrders((prev) => [newOrder, ...prev]);
-    return newOrder;
+    setOrders((prev) => [...newOrders, ...prev]);
+    consumeStock(deliveries.flatMap((delivery) => delivery.items));
+    return newOrders;
   };
 
   const getOrderById = (orderId) => {
@@ -80,7 +84,7 @@ export function OrderProvider({ children }) {
   };
 
   return (
-    <OrderContext.Provider value={{ orders, placeOrder, getOrderById }}>
+    <OrderContext.Provider value={{ orders, placeOrders, getOrderById }}>
       {children}
     </OrderContext.Provider>
   );

@@ -1,24 +1,31 @@
 import { useState } from "react";
-import { Search, ChevronDown, FileUp, Minus, Plus, ImageIcon, AlertTriangle } from "lucide-react";
+import { Search, FileUp, Minus, Plus, AlertTriangle } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
-import { inventoryItems } from "../../data/mockData";
+import { products, categories, vendorStoreId } from "../../data/mockData";
+import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
+
+const storeProducts = products.filter((p) => p.storeId === vendorStoreId);
+const storeCategories = categories.filter(
+  (cat) => cat.id === "all" || storeProducts.some((p) => p.categoryId === cat.id)
+);
+
+const stockStatus = (stock) => {
+  if (stock === 0) return "Out of Stock";
+  if (stock <= LOW_STOCK_THRESHOLD) return "Low Stock";
+  return "Active";
+};
 
 export default function InventoryPage() {
-  const [items, setItems] = useState(inventoryItems);
+  const { stockFor, adjustStock } = useInventory();
   const [query, setQuery] = useState("");
+  const [categoryId, setCategoryId] = useState("all");
 
   const q = query.trim().toLowerCase();
-  const visibleItems = q
-    ? items.filter((item) =>
-        [item.name, item.subtitle, item.id, item.category].some((field) => field?.toLowerCase().includes(q))
-      )
-    : items;
-
-  const updateStock = (id, delta) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, stock: Math.max(0, item.stock + delta) } : item))
-    );
-  };
+  const visibleItems = storeProducts.filter(
+    (p) =>
+      (categoryId === "all" || p.categoryId === categoryId) &&
+      (!q || [p.name, p.unit, p.id, p.category].some((field) => field.toLowerCase().includes(q)))
+  );
 
   return (
     <div className="space-y-lg">
@@ -37,11 +44,23 @@ export default function InventoryPage() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-md font-label text-label-md text-on-surface">
-            All Categories
-            <ChevronDown size={16} />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-full font-label text-label-md hover:bg-primary/5 transition-colors">
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            aria-label="Filter by category"
+            className="px-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-md font-label text-label-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+          >
+            {storeCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.id === "all" ? "All Categories" : cat.name}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled
+            title="Coming soon"
+            className="flex items-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-full font-label text-label-md opacity-40 cursor-not-allowed"
+          >
             <FileUp size={16} />
             Bulk Import
           </button>
@@ -67,59 +86,70 @@ export default function InventoryPage() {
               {visibleItems.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-lg py-xl text-center font-body text-body-md text-on-surface-variant">
-                    No products match "{query}".
+                    No products match your filters.
                   </td>
                 </tr>
               )}
-              {visibleItems.map((item) => (
-                <tr key={item.id} className={`border-b border-outline-variant/10 last:border-0 ${item.warning ? "bg-secondary-container/5" : ""}`}>
-                  <td className="px-lg py-md">
-                    <div className="w-12 h-12 rounded-md overflow-hidden bg-surface-container-high flex items-center justify-center">
-                      {item.image ? (
+              {visibleItems.map((item) => {
+                const stock = stockFor(item.id) ?? 0;
+                const warning = stock <= LOW_STOCK_THRESHOLD;
+                return (
+                  <tr key={item.id} className={`border-b border-outline-variant/10 last:border-0 ${warning ? "bg-secondary-container/5" : ""}`}>
+                    <td className="px-lg py-md">
+                      <div className="w-12 h-12 rounded-md overflow-hidden bg-surface-container-high">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon size={20} className="text-on-surface-variant" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-lg py-md">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-body text-body-md font-semibold text-on-surface">{item.name}</p>
-                      {item.warning && <AlertTriangle size={14} className="text-error" />}
-                    </div>
-                    <p className="font-body text-body-sm text-on-surface-variant">{item.subtitle}</p>
-                  </td>
-                  <td className="px-lg py-md font-body text-body-sm text-on-surface-variant">{item.id}</td>
-                  <td className="px-lg py-md font-body text-body-md text-on-surface">{item.category}</td>
-                  <td className="px-lg py-md font-label text-label-md text-primary font-semibold">{item.price}</td>
-                  <td className="px-lg py-md">
-                    <div className={`flex items-center gap-2 border rounded-md px-2 py-1 w-fit ${item.warning ? "border-error/40" : "border-outline-variant"}`}>
-                      <button onClick={() => updateStock(item.id, -1)} className="text-on-surface-variant hover:text-primary">
-                        <Minus size={14} />
+                      </div>
+                    </td>
+                    <td className="px-lg py-md">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-body text-body-md font-semibold text-on-surface">{item.name}</p>
+                        {warning && <AlertTriangle size={14} className="text-error" />}
+                      </div>
+                      <p className="font-body text-body-sm text-on-surface-variant">{item.unit}</p>
+                    </td>
+                    <td className="px-lg py-md font-body text-body-sm text-on-surface-variant">{item.id}</td>
+                    <td className="px-lg py-md font-body text-body-md text-on-surface">{item.category}</td>
+                    <td className="px-lg py-md font-label text-label-md text-primary font-semibold">Rs. {item.price}</td>
+                    <td className="px-lg py-md">
+                      <div className={`flex items-center gap-2 border rounded-md px-2 py-1 w-fit ${warning ? "border-error/40" : "border-outline-variant"}`}>
+                        <button
+                          onClick={() => adjustStock(item.id, -1)}
+                          disabled={stock === 0}
+                          aria-label={`Decrease stock of ${item.name}`}
+                          className="text-on-surface-variant hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className={`font-label text-label-md w-6 text-center ${warning ? "text-error" : "text-on-surface"}`}>
+                          {stock}
+                        </span>
+                        <button
+                          onClick={() => adjustStock(item.id, 1)}
+                          aria-label={`Increase stock of ${item.name}`}
+                          className="text-on-surface-variant hover:text-primary"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-lg py-md">
+                      <StatusBadge status={stockStatus(stock)} />
+                    </td>
+                    <td className="px-lg py-md">
+                      <button disabled title="Coming soon" className="font-label text-label-md text-primary opacity-40 cursor-not-allowed">
+                        Edit
                       </button>
-                      <span className={`font-label text-label-md w-6 text-center ${item.warning ? "text-error" : "text-on-surface"}`}>
-                        {item.stock}
-                      </span>
-                      <button onClick={() => updateStock(item.id, 1)} className="text-on-surface-variant hover:text-primary">
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-lg py-md">
-                    <StatusBadge status={item.status} />
-                  </td>
-                  <td className="px-lg py-md">
-                    <button className="font-label text-label-md text-primary hover:underline">Edit</button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         <div className="flex items-center justify-between px-lg py-md border-t border-outline-variant/20">
           <p className="font-body text-body-sm text-on-surface-variant">
-            Showing {visibleItems.length} of {items.length} products
+            Showing {visibleItems.length} of {storeProducts.length} products
           </p>
         </div>
       </div>

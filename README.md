@@ -24,17 +24,17 @@ Customer-facing (NearBasket):
 - `/store/:storeId` — Store page with category filter, in-store search and live cart (try `/store/green-valley-organics` or `/store/punjabi-spice-bazaar`)
 - `/deals` — Deals and product search across all stores (`?search=`, `?category=`, `?view=all`)
 - `/offers` — Promo codes that can be applied to the cart
-- `/orders` — Order history with details and one-click reorder
-- `/checkout` — Delivery address and payment (requires login)
+- `/orders` — Order history with details and one-click reorder. With no backend, new orders move from Placed to Delivered on a timer (Accepted at 2 min, Out for Delivery at 5, Delivered at 20)
+- `/checkout` — Delivery address and payment (requires login). One cart can hold items from several stores: each store delivers separately with its own fee (Rs. 25 per store, and every delivery is free once the whole cart reaches Rs. 500), and checkout places one order per store. A coupon applies to the whole cart and its discount is shared between the stores
 - `/login`, `/signup` — Demo authentication (stored in localStorage)
 
 The header search supports typing with autocomplete, voice search (Chrome/Edge, via the Web Speech API) and photo search (matches words in the photo's file name against the catalog).
 
-Vendor-facing (Vendor Hub):
-- `/vendor` — Dashboard: stat cards, recent orders, popular products
-- `/vendor/inventory` — Inventory table with editable stock counts
-- `/vendor/orders` — Orders list
-- `/vendor/settings` — Shop settings form
+Vendor-facing (Vendor Hub, linked from "Sell on NearBasket" in the footer). Until vendor accounts exist on a backend, the hub is signed in as Sharma General Store:
+- `/vendor` — Dashboard: active orders, low stock alerts, today's revenue, recent orders and best sellers, all from real orders placed in this browser
+- `/vendor/inventory` — The store's products with editable stock. Stock is shared with the shop: sold-out items can't be added to the cart, and placing an order reduces stock
+- `/vendor/orders` — Orders placed with the store
+- `/vendor/settings` — Shop settings form with validation, saved in this browser
 
 ## Design system
 
@@ -46,10 +46,11 @@ Icons use `lucide-react` in place of the Material Symbols font referenced in the
 
 ```
 src/
-  components/    Header, Footer, CartDrawer, RequireAuth, StoreCard, StatusBadge, VendorLayout
-  context/       AuthContext, CartContext, OrderContext (persisted to localStorage)
-  hooks/         useVoiceSearch
+  components/    Header, Footer, CartDrawer, DeliveryHeader, RequireAuth, StoreCard, StatusBadge, VendorLayout
+  context/       AuthContext, CartContext, OrderContext, InventoryContext (persisted to localStorage)
+  hooks/         useVoiceSearch, useDeliveryLocation, useNow, useVendorOrders
+  utils/         imageSearch, orderStatus, storeHours, vendorSettings
   pages/         HomePage, StorePage, DealsPage, OffersPage, OrdersPage, CheckoutPage, LoginPage, SignupPage, NotFoundPage
   pages/vendor/  DashboardPage, InventoryPage, OrdersPage, SettingsPage
-  data/          mockData.js — sample stores, products, offers, orders, inventory
+  data/          mockData.js — sample stores (with opening hours), products, offers, orders, starting stock
 ```
