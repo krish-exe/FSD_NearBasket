@@ -21,9 +21,9 @@ const sharmaSettings = {
   phone: "+91 98765 43210",
   description:
     "Your friendly neighborhood store for daily groceries, fresh dairy, and household essentials. Serving the community since 2015.",
-  street: "45 HAL 2nd Stage",
-  city: "Bengaluru",
-  pincode: "560038",
+  street: "12 Tilak Road, Ghatkopar East",
+  city: "Mumbai",
+  pincode: "400077",
   weekdayOpen: "08:00",
   weekdayClose: "22:00",
   sundayOpen: "08:00",

@@ -113,7 +113,7 @@ All colors, typography, spacing, radii and shadows in `tailwind.config.js` are t
 
 Icons use `lucide-react` in place of the Material Symbols font referenced in the original mockups, matched one-for-one by meaning (e.g. `location_on` → `MapPin`, `shopping_basket` → `ShoppingBasket`).
 
-The Track Order map uses Leaflet with CARTO Positron tiles (© OpenStreetMap contributors, © CARTO).
+The Track Order map uses Leaflet with Esri's Light Gray Canvas tiles, which need no API key (Tiles © Esri, with data from © OpenStreetMap contributors).
 
 ## Structure
 

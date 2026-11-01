@@ -4,15 +4,15 @@ import { MapPin, ChevronDown, Search, Camera, Mic, MicOff, CircleUserRound, Shop
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
-import { saveLocationCoords } from "../hooks/useDeliveryLocation";
+import { saveLocationCoords, DEFAULT_LOCATION } from "../hooks/useDeliveryLocation";
 import { searchTermFromImage } from "../utils/imageSearch";
 import { useCatalog } from "../context/CatalogContext";
 
 const POPULAR_LOCATIONS = [
-  "Indiranagar, Bengaluru",
-  "Koramangala, Bengaluru",
-  "HSR Layout, Bengaluru",
-  "Whitefield, Bengaluru",
+  "Ghatkopar East, Mumbai",
+  "Ghatkopar West, Mumbai",
+  "Vidyavihar, Mumbai",
+  "Vikhroli, Mumbai",
 ];
 
 export default function Header() {
@@ -21,7 +21,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(() => {
-    return localStorage.getItem("nearbasket_location") || "Home - Near Indiranagar, Bengaluru";
+    return localStorage.getItem("nearbasket_location") || DEFAULT_LOCATION;
   });
   const [locationSearch, setLocationSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
@@ -110,7 +110,7 @@ export default function Header() {
           if (res.ok) {
             const data = await res.json();
             const suburb = data.address?.suburb || data.address?.neighbourhood || data.address?.road || "";
-            const city = data.address?.city || data.address?.town || data.address?.state_district || "Bengaluru";
+            const city = data.address?.city || data.address?.town || data.address?.state_district || "Mumbai";
             const name = [suburb, city].filter(Boolean).join(", ");
             updateLocation(name || `Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
           } else {

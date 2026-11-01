@@ -7,6 +7,8 @@ import "leaflet/dist/leaflet.css";
 const PRIMARY = "#0d631b";
 const ACCENT = "#ff8f00";
 
+const ESRI_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+
 // Small round pins drawn in HTML, so no marker image files are needed
 const pin = (color, svgPath) =>
   L.divIcon({
@@ -58,12 +60,14 @@ export default function DeliveryMap({ route, storeName }) {
       className="h-72 md:h-96 w-full rounded-lg z-0"
       aria-label={`Map of the delivery route from ${storeName}`}
     >
+      {/* Esri Light Gray Canvas: a muted keyless basemap, drawn as a base layer plus a labels layer */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        subdomains="abcd"
+        url={`${ESRI_TILES}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`}
+        attribution='Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        maxNativeZoom={16}
         maxZoom={19}
       />
+      <TileLayer url={`${ESRI_TILES}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`} maxNativeZoom={16} maxZoom={19} />
       <Polyline
         positions={line}
         pathOptions={{ color: PRIMARY, weight: 5, opacity: 0.85, dashArray: hasRoad ? null : "8 10" }}

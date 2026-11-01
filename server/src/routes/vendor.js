@@ -68,7 +68,7 @@ router.patch("/products/:id/stock", async (req, res) => {
 
 // What the Shop Settings form starts with for a store that has never saved it
 function defaultSettings(store, vendor) {
-  const [street = "", city = "Bengaluru"] = (store.address || "").split(/,\s*(?=[^,]+$)/);
+  const [street = "", city = "Mumbai"] = (store.address || "").split(/,\s*(?=[^,]+$)/);
   return {
     shopName: store.name,
     shopType: "Kirana / Grocery",

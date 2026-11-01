@@ -16,6 +16,8 @@ const storeSchema = new mongoose.Schema(
     banner: String,
     image: String,
     location: point,
+    // Neighbourhood shown when the shopper's distance is unknown
+    area: String,
     // Vendor Hub "Shop Settings" form, kept as entered
     settings: { type: mongoose.Schema.Types.Mixed, default: null },
   },

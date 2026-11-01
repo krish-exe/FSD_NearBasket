@@ -11,13 +11,19 @@ export const PREP_MINUTES = 10; // packing time at the store before the rider le
 const RIDER_SPEED_KMPH = 20; // average two-wheeler speed in city traffic
 const ROAD_FACTOR = 1.3; // roads are ~30% longer than a straight line
 
-// Centres of the areas offered in the header's location menu
+// Shops only deliver to (and are only shown to) customers within this straight-line distance
+export const DELIVERY_RADIUS_KM = Number(process.env.DELIVERY_RADIUS_KM) || 5;
+
+// Centres of the areas around the shops, used when the address lookup service is unreachable.
+// More specific names first: "ghatkopar west" must match before plain "ghatkopar".
 const KNOWN_AREAS = [
-  { name: "indiranagar", lat: 12.9716, lng: 77.6412 },
-  { name: "koramangala", lat: 12.9352, lng: 77.6245 },
-  { name: "hsr layout", lat: 12.9116, lng: 77.6474 },
-  { name: "whitefield", lat: 12.9698, lng: 77.75 },
-  { name: "hal 2nd stage", lat: 12.9662, lng: 77.6459 },
+  { name: "ghatkopar west", lat: 19.0897, lng: 72.9048 },
+  { name: "ghatkopar", lat: 19.0833, lng: 72.9123 },
+  { name: "vidyavihar", lat: 19.0795, lng: 72.8971 },
+  { name: "vikhroli", lat: 19.1115, lng: 72.928 },
+  { name: "kurla", lat: 19.0653, lng: 72.8794 },
+  { name: "chembur", lat: 19.0548, lng: 72.898 },
+  { name: "powai", lat: 19.1187, lng: 72.9073 },
 ];
 
 const geocodeCache = new Map();
@@ -48,8 +54,10 @@ const MAX_STREET_OFFSET_KM = 3;
  * them, otherwise the delivery area, refined by the street address when that
  * lands inside the area.
  */
-export async function locateAddress({ coords, address, area }) {
+export async function locateAddress({ coords, address, area: label }) {
   if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) return coords;
+  // "Home - Near Ghatkopar East, Mumbai" -> "Ghatkopar East, Mumbai"
+  const area = label?.replace(/^(home|work|other)\s*-\s*/i, "").replace(/^near\s+/i, "");
   const offline = knownArea(`${address || ""} ${area || ""}`);
   try {
     const areaPoint = (area && (await nominatim(area))) || offline;
@@ -70,7 +78,7 @@ export async function geocodeExact(query) {
   }
 }
 
-function straightLineKm(a, b) {
+export function straightLineKm(a, b) {
   const rad = (deg) => (deg * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat);
   const dLng = rad(b.lng - a.lng);
@@ -117,3 +125,8 @@ export async function planTrip(from, to) {
 
 // Minutes from order to doorstep when nothing better is known
 export const FALLBACK_TOTAL_MINUTES = 30;
+
+// Quick order-to-door guess for shop listings, from the straight-line distance alone
+export function quickEstimateMinutes(distanceKm) {
+  return PREP_MINUTES + Math.max(3, Math.round(((distanceKm * ROAD_FACTOR) / RIDER_SPEED_KMPH) * 60));
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const LOCATION_STORAGE_KEY = "nearbasket_location";
 const COORDS_STORAGE_KEY = "nearbasket_location_coords";
-const DEFAULT_LOCATION = "Home - Near Indiranagar, Bengaluru";
+export const DEFAULT_LOCATION = "Home - Near Ghatkopar East, Mumbai";
 
 function readLocation() {
   try {

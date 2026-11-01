@@ -1,23 +1,35 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Loader2, WifiOff } from "lucide-react";
 import { api } from "../api/client";
+import { useDeliveryLocation, readLocationCoords } from "../hooks/useDeliveryLocation";
 
 const CatalogContext = createContext(null);
 
-// Stores, products (with live stock) and offers from the server, loaded once and refreshed after orders
+/**
+ * Stores, products (with live stock) and offers from the server. Only stores that
+ * deliver to the shopper's chosen location are included, so the catalog reloads
+ * whenever that location changes, and after orders.
+ */
 export function CatalogProvider({ children }) {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState(null);
+  const area = useDeliveryLocation();
 
   const refresh = useCallback(async () => {
+    const params = new URLSearchParams({ area });
+    const coords = readLocationCoords();
+    if (coords) {
+      params.set("lat", coords.lat);
+      params.set("lng", coords.lng);
+    }
     try {
-      const data = await api("/catalog");
+      const data = await api(`/catalog?${params}`);
       setCatalog(data);
       setError(null);
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [area]);
 
   useEffect(() => {
     refresh();

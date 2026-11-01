@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Camera, Mic, MicOff, ShoppingBasket, Cookie, Droplet, SprayCan, Leaf, Croissant, Sparkles, ArrowRight } from "lucide-react";
+import { Search, Camera, Mic, MicOff, ShoppingBasket, Cookie, Droplet, SprayCan, Leaf, Croissant, Sparkles, ArrowRight, MapPin } from "lucide-react";
 import StoreCard from "../components/StoreCard";
 import { categories } from "../data/categories";
 import { useCatalog } from "../context/CatalogContext";
+import { useDeliveryLocation } from "../hooks/useDeliveryLocation";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { searchTermFromImage } from "../utils/imageSearch";
@@ -18,7 +19,8 @@ const ICONS = {
 };
 
 export default function HomePage() {
-  const { stores, products } = useCatalog();
+  const { stores, products, location } = useCatalog();
+  const deliveryArea = useDeliveryLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -198,49 +200,51 @@ export default function HomePage() {
       </section>
 
       {/* Featured Deals Row */}
-      <section className="space-y-lg bg-surface-container-low p-xl rounded-xl border border-outline-variant/30">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-secondary" size={24} />
-            <h2 className="font-display text-headline-md text-on-surface font-bold">Today's Hot Deals</h2>
+      {featuredDeals.length > 0 && (
+        <section className="space-y-lg bg-surface-container-low p-xl rounded-xl border border-outline-variant/30">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Sparkles className="text-secondary" size={24} />
+              <h2 className="font-display text-headline-md text-on-surface font-bold">Today's Hot Deals</h2>
+            </div>
+            <Link to="/deals" className="font-label text-label-md text-primary font-bold hover:underline flex items-center gap-1">
+              <span>See All Deals</span>
+              <ArrowRight size={16} />
+            </Link>
           </div>
-          <Link to="/deals" className="font-label text-label-md text-primary font-bold hover:underline flex items-center gap-1">
-            <span>See All Deals</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-md">
-          {featuredDeals.map((product) => (
-            <div
-              key={product.id}
-              className="bg-surface-container-lowest rounded-lg p-md border border-outline-variant/20 shadow-card flex flex-col justify-between"
-            >
-              <div className="relative h-36 w-full rounded-md overflow-hidden bg-surface-container-low mb-sm">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                <span className="absolute top-2 left-2 bg-secondary text-on-secondary text-xs font-bold px-2 py-0.5 rounded-full">
-                  {product.dealTag}
-                </span>
-              </div>
-              <div>
-                <h4 className="font-body text-body-md font-bold text-on-surface line-clamp-1">{product.name}</h4>
-                <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
-                <div className="flex items-center justify-between mt-md">
-                  <div className="font-display text-headline-sm text-primary font-bold">
-                    Rs. {product.price}
+  
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-md">
+            {featuredDeals.map((product) => (
+              <div
+                key={product.id}
+                className="bg-surface-container-lowest rounded-lg p-md border border-outline-variant/20 shadow-card flex flex-col justify-between"
+              >
+                <div className="relative h-36 w-full rounded-md overflow-hidden bg-surface-container-low mb-sm">
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  <span className="absolute top-2 left-2 bg-secondary text-on-secondary text-xs font-bold px-2 py-0.5 rounded-full">
+                    {product.dealTag}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-body text-body-md font-bold text-on-surface line-clamp-1">{product.name}</h4>
+                  <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
+                  <div className="flex items-center justify-between mt-md">
+                    <div className="font-display text-headline-sm text-primary font-bold">
+                      Rs. {product.price}
+                    </div>
+                    <button
+                      onClick={() => addToCart(product, 1)}
+                      className="px-3 py-1.5 bg-primary-container text-on-primary font-label text-label-sm rounded-full hover:bg-primary transition-colors cursor-pointer"
+                    >
+                      + Add
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addToCart(product, 1)}
-                    className="px-3 py-1.5 bg-primary-container text-on-primary font-label text-label-sm rounded-full hover:bg-primary transition-colors cursor-pointer"
-                  >
-                    + Add
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Top Stores Near You */}
       <section id="top-stores" className="space-y-lg">
@@ -251,11 +255,21 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
-          {stores.map((store) => (
-            <StoreCard key={store.id} store={store} />
-          ))}
-        </div>
+        {stores.length === 0 ? (
+          <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-xl text-center space-y-sm">
+            <MapPin size={32} className="mx-auto text-on-surface-variant" />
+            <h3 className="font-display text-headline-sm text-on-surface">No stores deliver to {deliveryArea} yet</h3>
+            <p className="font-body text-body-md text-on-surface-variant max-w-md mx-auto">
+              NearBasket stores deliver within {location.radiusKm} km. Pick a nearer area from the location menu at the top.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
+            {stores.map((store) => (
+              <StoreCard key={store.id} store={store} />
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

@@ -5,7 +5,7 @@ import Store from "../models/Store.js";
 import Offer from "../models/Offer.js";
 import { requireAuth } from "../middleware/auth.js";
 import { computeDiscount, offerProblem, splitIntoDeliveries } from "../../../shared/pricing.js";
-import { locateAddress, planTrip, FALLBACK_TOTAL_MINUTES } from "../services/geo.js";
+import { locateAddress, planTrip, straightLineKm, DELIVERY_RADIUS_KM, FALLBACK_TOTAL_MINUTES } from "../services/geo.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -120,10 +120,17 @@ router.post("/", async (req, res) => {
   const storeById = (id) => stores.find((s) => s.id === id);
   const deliveries = splitIntoDeliveries(cartItems, offer, discount, (id) => storeById(id)?.name);
 
+  const deliverTo = await locateAddress({ coords, address: address.trim(), area: area.trim() });
+  const tooFar = deliverTo && stores.find((s) => s.location && straightLineKm(s.location, deliverTo) > DELIVERY_RADIUS_KM);
+  if (tooFar) {
+    return res.status(400).json({
+      error: `${tooFar.name} doesn't deliver to ${area.trim() || "your address"}. Remove its items or change your delivery area.`,
+    });
+  }
+
   const stockProblem = await reserveStock(cartItems);
   if (stockProblem) return res.status(409).json({ error: stockProblem });
 
-  const deliverTo = await locateAddress({ coords, address: address.trim(), area: area.trim() });
   const checkoutId = await newCheckoutId();
   const now = new Date();
 
