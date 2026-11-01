@@ -1,7 +1,8 @@
-import { Store } from "lucide-react";
+import { Store, Clock } from "lucide-react";
 
 // Heading for one store's items in the cart: each store delivers separately with its own fee
-export default function DeliveryHeader({ delivery, index, count }) {
+// eta (optional): { minutes, distanceKm } from the server's delivery estimate
+export default function DeliveryHeader({ delivery, index, count, eta }) {
   return (
     <div className="flex items-start justify-between gap-md">
       <div className="min-w-0">
@@ -12,6 +13,12 @@ export default function DeliveryHeader({ delivery, index, count }) {
         {count > 1 && (
           <p className="font-body text-body-sm text-on-surface-variant pl-[22px]">
             Delivery {index + 1} of {count}
+          </p>
+        )}
+        {eta && (
+          <p className="font-body text-body-sm text-on-surface-variant pl-[22px] flex items-center gap-1">
+            <Clock size={12} className="shrink-0" />
+            Arrives in ~{eta.minutes} min{eta.distanceKm != null && ` · ${eta.distanceKm} km away`}
           </p>
         )}
       </div>

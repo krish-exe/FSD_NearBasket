@@ -1,16 +1,8 @@
-export const categories = [
-  { id: "all", name: "All Items", icon: "basket", bg: "bg-surface-container", fg: "text-primary" },
-  { id: "fruits-veg", name: "Fruits & Veggies", icon: "leaf", bg: "bg-primary-fixed", fg: "text-on-primary-fixed-variant" },
-  { id: "dairy", name: "Dairy & Eggs", icon: "droplet", bg: "bg-tertiary-fixed", fg: "text-on-tertiary-fixed" },
-  { id: "bakery", name: "Bakery & Bread", icon: "croissant", bg: "bg-secondary-fixed", fg: "text-on-secondary-fixed" },
-  { id: "snacks", name: "Snacks & Drinks", icon: "cookie", bg: "bg-secondary-fixed-dim", fg: "text-on-secondary-fixed-variant" },
-  { id: "staples", name: "Staples & Grains", icon: "basket", bg: "bg-surface-container-high", fg: "text-primary" },
-  { id: "household", name: "Household Care", icon: "spray", bg: "bg-surface-container", fg: "text-primary" },
-];
 
 export const stores = [
   {
     id: "green-valley-organics",
+    location: { lat: 12.9719, lng: 77.6412 },
     name: "Green Valley Organics",
     rating: 4.9,
     reviews: 340,
@@ -23,6 +15,7 @@ export const stores = [
   },
   {
     id: "sharma-general-store",
+    location: { lat: 12.9662, lng: 77.6459 },
     name: "Sharma General Store",
     rating: 4.8,
     reviews: 210,
@@ -35,6 +28,7 @@ export const stores = [
   },
   {
     id: "fresh-mart-daily",
+    location: { lat: 12.9332, lng: 77.6296 },
     name: "Fresh Mart Daily",
     rating: 4.6,
     reviews: 156,
@@ -47,6 +41,7 @@ export const stores = [
   },
   {
     id: "punjabi-spice-bazaar",
+    location: { lat: 12.9784, lng: 77.6408 },
     name: "Punjabi Spice Bazaar",
     rating: 4.7,
     reviews: 268,
@@ -255,7 +250,7 @@ export const products = [
     categoryId: "snacks",
     storeId: "sharma-general-store",
     rating: 4.8,
-    image: "https://images.unsplash.com/photo-1508061252966-f7266b0337c7?q=80&w=600&auto=format&fit=crop",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Almonds_1.jpg/500px-Almonds_1.jpg",
     description: "Crunchy lightly salted premium roasted almonds."
   },
   {
@@ -572,10 +567,18 @@ export const offers = [
   }
 ];
 
-// The Vendor Hub is signed in as this store until vendor accounts exist on a backend
-export const vendorStoreId = "sharma-general-store";
+// One vendor login per store; all seeded accounts share SEED_PASSWORD (see .env.example)
+export const vendorAccounts = [
+  { name: "Ramesh Sharma", email: "sharma@nearbasket.test", phone: "9876543210", storeId: "sharma-general-store" },
+  { name: "Anita Rao", email: "greenvalley@nearbasket.test", phone: "9876500011", storeId: "green-valley-organics" },
+  { name: "Vikram Shetty", email: "freshmart@nearbasket.test", phone: "9876500022", storeId: "fresh-mart-daily" },
+  { name: "Harpreet Singh", email: "punjabi@nearbasket.test", phone: "9876500033", storeId: "punjabi-spice-bazaar" },
+];
 
-// Starting stock for the vendor store's products. Only these products are stock-tracked;
+// Owner of the sample order history below
+export const demoCustomer = { name: "Priya Patel", email: "priya@example.com", phone: "9123456780" };
+
+// Starting stock for Sharma General Store's products. Only these products are stock-tracked;
 // other stores' products are treated as always available.
 export const initialStock = {
   "organic-tomatoes": 40,
@@ -653,7 +656,7 @@ export const initialOrders = [
           name: "California Roasted Almonds",
           unit: "250g pack",
           price: 299,
-          image: "https://images.unsplash.com/photo-1508061252966-f7266b0337c7?q=80&w=600&auto=format&fit=crop"
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Almonds_1.jpg/500px-Almonds_1.jpg"
         },
         qty: 1
       }

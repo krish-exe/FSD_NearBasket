@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Tag, Copy, Check, Calendar, ArrowRight, ShieldCheck, ShoppingBag, AlertCircle } from "lucide-react";
-import { offers } from "../data/mockData";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 
 export default function OffersPage() {
+  const { offers } = useCatalog();
   const [copiedCode, setCopiedCode] = useState(null);
   const [feedback, setFeedback] = useState(null); // { code, message }
   const { applyOffer, openCart } = useCart();

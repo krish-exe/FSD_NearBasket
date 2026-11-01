@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const LOCATION_STORAGE_KEY = "nearbasket_location";
+const COORDS_STORAGE_KEY = "nearbasket_location_coords";
 const DEFAULT_LOCATION = "Home - Near Indiranagar, Bengaluru";
 
 function readLocation() {
@@ -8,6 +9,25 @@ function readLocation() {
     return localStorage.getItem(LOCATION_STORAGE_KEY) || DEFAULT_LOCATION;
   } catch {
     return DEFAULT_LOCATION;
+  }
+}
+
+// Exact GPS position behind the current location, or null when it was typed or picked from the list
+export function readLocationCoords() {
+  try {
+    const stored = localStorage.getItem(COORDS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLocationCoords(coords) {
+  try {
+    if (coords) localStorage.setItem(COORDS_STORAGE_KEY, JSON.stringify(coords));
+    else localStorage.removeItem(COORDS_STORAGE_KEY);
+  } catch {
+    // Storage unavailable; the server falls back to looking up the area name
   }
 }
 

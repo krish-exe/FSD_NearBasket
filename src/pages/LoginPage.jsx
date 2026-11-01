@@ -60,7 +60,9 @@ export default function LoginPage() {
     const result = await login(form.email, form.password);
     setIsSubmitting(false);
     if (result.ok) {
-      navigate(redirectTo, { replace: true });
+      // Store owners go straight to their Vendor Hub unless they were heading somewhere else
+      const vendorHome = result.user?.role === "vendor" && redirectTo === "/";
+      navigate(vendorHome ? "/vendor" : redirectTo, { replace: true });
     } else {
       setErrors({ [result.field]: result.error });
     }
@@ -75,6 +77,9 @@ export default function LoginPage() {
           </div>
           <h1 className="font-display text-headline-md text-on-surface">Welcome back</h1>
           <p className="font-body text-body-md text-on-surface-variant">Log in to order from stores near you.</p>
+          {location.state?.notice && (
+            <p className="font-body text-body-sm text-error">{location.state.notice}</p>
+          )}
         </div>
 
         <form className="space-y-md" onSubmit={handleSubmit} noValidate>

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { MapPin, ChevronDown, Search, Camera, Mic, MicOff, CircleUserRound, ShoppingCart, LocateFixed, LogOut, Tag, Package, Sparkles, X, Check, Loader2 } from "lucide-react";
+import { MapPin, ChevronDown, Search, Camera, Mic, MicOff, CircleUserRound, ShoppingCart, LocateFixed, LogOut, Tag, Package, Sparkles, X, Check, Loader2, Store } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
+import { saveLocationCoords } from "../hooks/useDeliveryLocation";
 import { searchTermFromImage } from "../utils/imageSearch";
-import { products as mockProducts } from "../data/mockData";
+import { useCatalog } from "../context/CatalogContext";
 
 const POPULAR_LOCATIONS = [
   "Indiranagar, Bengaluru",
@@ -27,8 +28,9 @@ export default function Header() {
   const [locationMessage, setLocationMessage] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
 
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, isVendor, logout } = useAuth();
   const { itemCount, openCart } = useCart();
+  const { products } = useCatalog();
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const locationContainerRef = useRef(null);
@@ -36,7 +38,7 @@ export default function Header() {
 
   // Search autocomplete results
   const searchResults = searchQuery.trim()
-    ? mockProducts.filter(
+    ? products.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -66,12 +68,14 @@ export default function Header() {
     };
   }, []);
 
-  const updateLocation = (newLoc) => {
+  // coords is the exact GPS position when known; typed or picked areas are looked up by the server
+  const updateLocation = (newLoc, coords = null) => {
     if (!newLoc || !newLoc.trim()) return;
     const trimmed = newLoc.trim();
     setCurrentLocation(trimmed);
     try {
       localStorage.setItem("nearbasket_location", trimmed);
+      saveLocationCoords(coords);
       window.dispatchEvent(new Event("nearbasket_location_change"));
     } catch {
       // ignore local storage errors
@@ -98,6 +102,7 @@ export default function Header() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
+        const gpsPoint = { lat: latitude, lng: longitude };
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
@@ -107,12 +112,12 @@ export default function Header() {
             const suburb = data.address?.suburb || data.address?.neighbourhood || data.address?.road || "";
             const city = data.address?.city || data.address?.town || data.address?.state_district || "Bengaluru";
             const name = [suburb, city].filter(Boolean).join(", ");
-            updateLocation(name || `Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+            updateLocation(name || `Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
           } else {
-            updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+            updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
           }
         } catch {
-          updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+          updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
         } finally {
           setIsLocating(false);
         }
@@ -169,7 +174,7 @@ export default function Header() {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow picking the same photo again
     if (!file) return;
-    const term = searchTermFromImage(file);
+    const term = searchTermFromImage(file, products);
     if (!term) {
       setPhotoMessage("Couldn't recognise that photo. Try typing the item name instead.");
       return;
@@ -498,6 +503,16 @@ export default function Header() {
                       <Package className="text-on-surface-variant" size={18} />
                       <span className="font-label text-label-md text-on-surface">My Orders</span>
                     </Link>
+                    {isVendor && (
+                      <Link
+                        to="/vendor"
+                        onClick={() => setAccountOpen(false)}
+                        className="w-full flex items-center gap-md px-md py-2.5 hover:bg-surface-container-low transition-colors text-left"
+                      >
+                        <Store className="text-on-surface-variant" size={18} />
+                        <span className="font-label text-label-md text-on-surface">Vendor Hub</span>
+                      </Link>
+                    )}
                     <Link
                       to="/offers"
                       onClick={() => setAccountOpen(false)}

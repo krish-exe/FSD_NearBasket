@@ -1,20 +1,23 @@
 import { Link } from "react-router-dom";
 import { ShoppingCart, AlertTriangle, Wallet } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
-import { products, vendorStoreId } from "../../data/mockData";
+import { useCatalog } from "../../context/CatalogContext";
+import { useAuth } from "../../context/AuthContext";
 import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
 import { useVendorOrders, unitCount } from "../../hooks/useVendorOrders";
 import { useNow } from "../../hooks/useNow";
-import { getOrderStatus, ACTIVE_STATUSES } from "../../utils/orderStatus";
-import { loadVendorSettings } from "../../utils/vendorSettings";
+import { ACTIVE_STATUSES } from "../../utils/orderStatus";
 
 export default function DashboardPage() {
-  const orders = useVendorOrders();
+  const { orders } = useVendorOrders();
+  const { products, stores } = useCatalog();
+  const { user } = useAuth();
+  const vendorStoreId = user.storeId;
   const { stockFor } = useInventory();
   const now = useNow();
-  const { shopName } = loadVendorSettings();
+  const shopName = stores.find((s) => s.id === vendorStoreId)?.name || "your store";
 
-  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(getOrderStatus(o, now)));
+  const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
   const today = new Date(now).toDateString();
   const todaysOrders = orders.filter((o) => new Date(o.date).toDateString() === today);
   const todaysRevenue = todaysOrders.reduce((sum, o) => sum + o.total, 0);
@@ -123,7 +126,7 @@ export default function DashboardPage() {
                     <td className="px-lg py-md font-body text-body-md text-on-surface-variant">{unitCount(order)} items</td>
                     <td className="px-lg py-md font-body text-body-md text-on-surface">Rs. {order.total.toFixed(2)}</td>
                     <td className="px-lg py-md">
-                      <StatusBadge status={getOrderStatus(order, now)} />
+                      <StatusBadge status={order.status} />
                     </td>
                   </tr>
                 ))}

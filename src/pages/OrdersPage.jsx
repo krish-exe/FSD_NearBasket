@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Package, Clock, ShoppingBag, ArrowRight, RotateCcw, CheckCircle2, Eye, MapPin, CreditCard, X } from "lucide-react";
+import { Package, Clock, ShoppingBag, ArrowRight, RotateCcw, CheckCircle2, Eye, MapPin, CreditCard, X, Navigation, Loader2 } from "lucide-react";
 import { useOrders } from "../context/OrderContext";
 import { useCart } from "../context/CartContext";
 import StatusBadge from "../components/StatusBadge";
-import { products as catalog } from "../data/mockData";
-import { getOrderStatus } from "../utils/orderStatus";
+import { useCatalog } from "../context/CatalogContext";
+import { minutesUntilArrival, formatClock, ACTIVE_STATUSES } from "../utils/orderStatus";
 import { useNow } from "../hooks/useNow";
 
 export default function OrdersPage() {
   const [searchParams] = useSearchParams();
   const newOrderIds = searchParams.get("newOrderIds")?.split(",").filter(Boolean) || [];
-  const { orders } = useOrders();
+  const { orders, loaded } = useOrders();
+  const { products: catalog } = useCatalog();
   const { addItems, openCart } = useCart();
   const now = useNow();
 
@@ -75,7 +76,11 @@ export default function OrdersPage() {
       )}
 
       {/* Orders List */}
-      {orders.length === 0 ? (
+      {!loaded ? (
+        <div className="flex justify-center py-2xl text-primary">
+          <Loader2 size={32} className="animate-spin" />
+        </div>
+      ) : orders.length === 0 ? (
         <section className="bg-surface-container-lowest rounded-lg p-2xl text-center border border-outline-variant/30 space-y-md">
           <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mx-auto text-on-surface-variant">
             <Package size={40} />
@@ -106,14 +111,28 @@ export default function OrdersPage() {
                     <span className="font-display text-headline-sm font-bold text-on-surface">
                       {order.id}
                     </span>
-                    <StatusBadge status={getOrderStatus(order, now)} />
+                    <StatusBadge status={order.status} />
                   </div>
                   <p className="font-body text-body-sm text-on-surface-variant flex items-center gap-1">
                     <Clock size={14} /> Placed on {order.formattedDate} • Store: <strong>{order.storeName}</strong>
                   </p>
+                  {ACTIVE_STATUSES.includes(order.status) && order.estimatedArrival && (
+                    <p className="font-body text-body-sm text-primary font-semibold">
+                      Arriving by {formatClock(order.estimatedArrival)} (about {minutesUntilArrival(order, now)} min)
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-md">
+                <div className="flex flex-wrap items-center gap-md">
+                  {order.status !== "Cancelled" && (
+                    <Link
+                      to={`/orders/${order.id}/track`}
+                      className="px-4 py-2 bg-surface-container-low text-on-surface font-label text-label-md rounded-full hover:bg-surface-container-high transition-colors flex items-center gap-1.5"
+                    >
+                      <Navigation size={16} />
+                      <span>Track Order</span>
+                    </Link>
+                  )}
                   <button
                     onClick={() => setSelectedOrder(order)}
                     className="px-4 py-2 bg-surface-container-low text-on-surface font-label text-label-md rounded-full hover:bg-surface-container-high transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -194,7 +213,7 @@ export default function OrdersPage() {
             <div className="space-y-md max-h-96 overflow-y-auto pr-1">
               <div className="flex justify-between items-center bg-surface-container-low p-md rounded-lg">
                 <span className="font-label text-label-md text-on-surface">Order Status</span>
-                <StatusBadge status={getOrderStatus(selectedOrder, now)} />
+                <StatusBadge status={selectedOrder.status} />
               </div>
 
               <div className="space-y-sm">

@@ -1,32 +1,11 @@
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { offers, stores } from "../data/mockData";
 import { useInventory } from "./InventoryContext";
+import { useCatalog } from "./CatalogContext";
+import { computeDiscount, offerProblem, splitIntoDeliveries } from "../../shared/pricing.js";
+
+export { DELIVERY_FEE, FREE_DELIVERY_FROM } from "../../shared/pricing.js";
 
 const CartContext = createContext(null);
-
-// Subtotal of the items an offer applies to (whole cart unless the offer is category-specific)
-function eligibleSubtotal(offer, cartItems) {
-  return cartItems.reduce((sum, item) => {
-    const eligible = !offer.categoryIds || offer.categoryIds.includes(item.product.categoryId);
-    return eligible ? sum + item.product.price * item.qty : sum;
-  }, 0);
-}
-
-function computeDiscount(offer, cartItems, subtotal) {
-  if (!offer || subtotal <= 0 || subtotal < offer.minOrder) return 0;
-  const base = eligibleSubtotal(offer, cartItems);
-  if (base <= 0) return 0;
-
-  if (offer.discountType === "flat") {
-    return Math.min(offer.discountValue, base);
-  }
-  if (offer.discountType === "pct") {
-    let disc = (base * offer.discountValue) / 100;
-    if (offer.maxDiscount) disc = Math.min(disc, offer.maxDiscount);
-    return Math.min(disc, base);
-  }
-  return 0;
-}
 
 // Adds items to the cart, never past what is in stock (stockFor returns null for untracked products)
 function mergeItems(prevItems, newItems, stockFor) {
@@ -52,52 +31,12 @@ function mergeItems(prevItems, newItems, stockFor) {
   return updated;
 }
 
-export const DELIVERY_FEE = 25;
-export const FREE_DELIVERY_FROM = 500;
-
-/**
- * Groups cart items by store. Every store delivers separately with its own fee,
- * and all deliveries are free once the whole cart reaches Rs. 500. A cart-wide
- * coupon discount is shared between stores in proportion to the eligible items
- * each one supplies.
- */
-function splitIntoDeliveries(cartItems, offer, discountAmount) {
-  const groups = [];
-  cartItems.forEach((item) => {
-    const storeId = item.product.storeId || null;
-    let group = groups.find((g) => g.storeId === storeId);
-    if (!group) {
-      group = { storeId, storeName: stores.find((s) => s.id === storeId)?.name || "NearBasket Store", items: [] };
-      groups.push(group);
-    }
-    group.items.push(item);
-  });
-
-  const cartSubtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.qty, 0);
-  const deliveryFee = cartSubtotal >= FREE_DELIVERY_FROM ? 0 : DELIVERY_FEE;
-  const eligibleTotal = offer ? eligibleSubtotal(offer, cartItems) : 0;
-  let discountLeft = discountAmount;
-
-  return groups.map((group, index) => {
-    const subtotal = group.items.reduce((sum, item) => sum + item.product.price * item.qty, 0);
-    let discount = 0;
-    if (discountAmount > 0 && eligibleTotal > 0) {
-      // The last store takes the rounding remainder so the shares add up exactly
-      discount =
-        index === groups.length - 1
-          ? Math.round(discountLeft * 100) / 100
-          : Math.round(((discountAmount * eligibleSubtotal(offer, group.items)) / eligibleTotal) * 100) / 100;
-      discountLeft -= discount;
-    }
-    return { ...group, subtotal, deliveryFee, discount, total: Math.max(0, subtotal + deliveryFee - discount) };
-  });
-}
-
 const CART_STORAGE_KEY = "nearbasket_cart_v1";
 const OFFER_STORAGE_KEY = "nearbasket_offer_v1";
 
 export function CartProvider({ children }) {
   const { stockFor } = useInventory();
+  const { products, offers, stores } = useCatalog();
 
   const [cartItems, setCartItems] = useState(() => {
     try {
@@ -171,29 +110,36 @@ export function CartProvider({ children }) {
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
+  // The saved cart keeps a copy of each product; prices and details come from the live catalog
+  const liveItems = useMemo(
+    () => cartItems.map((item) => ({ ...item, product: products.find((p) => p.id === item.product.id) || item.product })),
+    [cartItems, products]
+  );
+
   // Calculations
   const itemCount = useMemo(() => {
     return cartItems.reduce((total, item) => total + item.qty, 0);
   }, [cartItems]);
 
   const subtotal = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.product.price * item.qty, 0);
-  }, [cartItems]);
+    return liveItems.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+  }, [liveItems]);
 
   const appliedOffer = useMemo(() => {
     if (!appliedOfferCode) return null;
     return offers.find((o) => o.code.toUpperCase() === appliedOfferCode.toUpperCase()) || null;
-  }, [appliedOfferCode]);
+  }, [appliedOfferCode, offers]);
 
   const discountAmount = useMemo(
-    () => computeDiscount(appliedOffer, cartItems, subtotal),
-    [appliedOffer, cartItems, subtotal]
+    () => computeDiscount(appliedOffer, liveItems, subtotal),
+    [appliedOffer, liveItems, subtotal]
   );
 
   // Each store delivers its own items, so the cart splits into one delivery per store
   const deliveries = useMemo(
-    () => splitIntoDeliveries(cartItems, appliedOffer, discountAmount),
-    [cartItems, appliedOffer, discountAmount]
+    () =>
+      splitIntoDeliveries(liveItems, appliedOffer, discountAmount, (storeId) => stores.find((s) => s.id === storeId)?.name),
+    [liveItems, appliedOffer, discountAmount, stores]
   );
 
   const deliveryFee = useMemo(() => deliveries.reduce((sum, d) => sum + d.deliveryFee, 0), [deliveries]);
@@ -214,20 +160,8 @@ export function CartProvider({ children }) {
     if (!foundOffer) {
       return { success: false, message: "Invalid offer code. Please check and try again." };
     }
-    if (subtotal < foundOffer.minOrder) {
-      return {
-        success: false,
-        message: `Minimum order amount for ${foundOffer.code} is Rs. ${foundOffer.minOrder}. Add items worth Rs. ${(
-          foundOffer.minOrder - subtotal
-        ).toFixed(0)} more!`,
-      };
-    }
-    if (foundOffer.categoryIds && eligibleSubtotal(foundOffer, cartItems) <= 0) {
-      return {
-        success: false,
-        message: `${foundOffer.code} only applies to selected categories. Add an eligible item to use it.`,
-      };
-    }
+    const problem = offerProblem(foundOffer, liveItems, subtotal);
+    if (problem) return { success: false, message: problem };
     setAppliedOfferCode(foundOffer.code);
     return { success: true, message: `Offer '${foundOffer.code}' applied successfully!` };
   };
@@ -239,7 +173,7 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider
       value={{
-        cartItems,
+        cartItems: liveItems,
         itemCount,
         subtotal,
         deliveryFee,

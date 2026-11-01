@@ -1,19 +1,21 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Star, Map, Plus, Minus, ShoppingBasket, Search, ArrowRight } from "lucide-react";
-import { stores as mockStores, products as mockProducts, categories as globalCategories } from "../data/mockData";
+import { categories as globalCategories } from "../data/categories";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useInventory, LOW_STOCK_THRESHOLD } from "../context/InventoryContext";
 import NotFoundPage from "./NotFoundPage";
 
 export default function StorePage() {
+  const { stores, products } = useCatalog();
   const { storeId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get("category") || "all";
   const highlightedProductId = searchParams.get("product");
 
-  const store = mockStores.find((s) => s.id === storeId);
+  const store = stores.find((s) => s.id === storeId);
 
   const [activeCategory, setActiveCategory] = useState(categoryParam);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,8 +44,8 @@ export default function StorePage() {
 
   // Everything this store sells, and the categories it actually stocks
   const allStoreProducts = useMemo(
-    () => (store ? mockProducts.filter((p) => p.storeId === store.id) : []),
-    [store]
+    () => (store ? products.filter((p) => p.storeId === store.id) : []),
+    [store, products]
   );
   const storeCategories = useMemo(
     () => globalCategories.filter((cat) => cat.id === "all" || allStoreProducts.some((p) => p.categoryId === cat.id)),

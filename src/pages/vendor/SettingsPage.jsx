@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Store, MapPin, Clock, BadgeCheck, CheckCircle2, AlertCircle } from "lucide-react";
-import { loadVendorSettings, saveVendorSettings } from "../../utils/vendorSettings";
+import { useState, useEffect } from "react";
+import { Store, MapPin, Clock, BadgeCheck, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { api } from "../../api/client";
+import { useCatalog } from "../../context/CatalogContext";
 
 const SHOP_TYPES = ["Kirana / Grocery", "Bakery", "Pharmacy"];
 
@@ -24,10 +25,21 @@ function validate(form) {
 }
 
 export default function SettingsPage() {
-  const [saved, setSaved] = useState(loadVendorSettings);
-  const [form, setForm] = useState(saved);
+  const [saved, setSaved] = useState(null);
+  const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
   const [feedback, setFeedback] = useState(null); // { ok, message }
+  const [isSaving, setIsSaving] = useState(false);
+  const { refresh: refreshCatalog } = useCatalog();
+
+  useEffect(() => {
+    api("/vendor/store")
+      .then(({ settings }) => {
+        setSaved(settings);
+        setForm(settings);
+      })
+      .catch((e) => setFeedback({ ok: false, message: e.message }));
+  }, []);
 
   const handleChange = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -38,8 +50,9 @@ export default function SettingsPage() {
   const inputClass = (field) =>
     `${inputBase} ${errors[field] ? "border-error focus:ring-error" : "border-outline-variant focus:ring-primary"}`;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     const nextErrors = validate(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -47,13 +60,19 @@ export default function SettingsPage() {
       return;
     }
     const cleaned = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()]));
-    if (!saveVendorSettings(cleaned)) {
-      setFeedback({ ok: false, message: "Couldn't save in this browser. Check that storage is enabled." });
-      return;
+    setIsSaving(true);
+    try {
+      const { settings } = await api("/vendor/store/settings", { method: "PUT", body: cleaned });
+      setSaved(settings);
+      setForm(settings);
+      setFeedback({ ok: true, message: "Changes saved." });
+      refreshCatalog(); // shoppers see the new name, address and hours
+    } catch (err) {
+      if (err.errors) setErrors(err.errors);
+      setFeedback({ ok: false, message: err.message });
+    } finally {
+      setIsSaving(false);
     }
-    setSaved(cleaned);
-    setForm(cleaned);
-    setFeedback({ ok: true, message: "Changes saved." });
   };
 
   const handleCancel = () => {
@@ -63,6 +82,16 @@ export default function SettingsPage() {
   };
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
+
+  if (!form) {
+    return feedback ? (
+      <p role="alert" className="font-body text-body-md text-error">{feedback.message}</p>
+    ) : (
+      <div className="flex justify-center py-2xl text-primary">
+        <Loader2 size={32} className="animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="max-w-2xl space-y-lg">
@@ -199,9 +228,10 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row gap-md pb-xl">
         <button
           type="submit"
-          className="flex-1 py-3 bg-primary text-on-primary font-label text-label-md rounded-full hover:bg-primary-container transition-colors shadow-sm"
+          disabled={isSaving}
+          className="flex-1 py-3 bg-primary text-on-primary font-label text-label-md rounded-full hover:bg-primary-container transition-colors shadow-sm disabled:opacity-50"
         >
-          Save Changes
+          {isSaving ? "Saving…" : "Save Changes"}
         </button>
         <button
           type="button"

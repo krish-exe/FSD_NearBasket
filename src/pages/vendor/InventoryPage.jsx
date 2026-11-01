@@ -1,13 +1,11 @@
 import { useState } from "react";
+import { useCatalog } from "../../context/CatalogContext";
+import { useAuth } from "../../context/AuthContext";
 import { Search, FileUp, Minus, Plus, AlertTriangle } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
-import { products, categories, vendorStoreId } from "../../data/mockData";
+import { categories } from "../../data/categories";
 import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
 
-const storeProducts = products.filter((p) => p.storeId === vendorStoreId);
-const storeCategories = categories.filter(
-  (cat) => cat.id === "all" || storeProducts.some((p) => p.categoryId === cat.id)
-);
 
 const stockStatus = (stock) => {
   if (stock === 0) return "Out of Stock";
@@ -16,7 +14,19 @@ const stockStatus = (stock) => {
 };
 
 export default function InventoryPage() {
-  const { stockFor, adjustStock } = useInventory();
+  const { stockFor, adjustStock: saveStock } = useInventory();
+  const { products } = useCatalog();
+  const { user } = useAuth();
+  const [stockError, setStockError] = useState("");
+
+  const storeProducts = products.filter((p) => p.storeId === user.storeId);
+  const storeCategories = categories.filter(
+    (cat) => cat.id === "all" || storeProducts.some((p) => p.categoryId === cat.id)
+  );
+
+  const adjustStock = async (productId, delta) => {
+    setStockError((await saveStock(productId, delta)) || "");
+  };
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("all");
 
@@ -66,6 +76,12 @@ export default function InventoryPage() {
           </button>
         </div>
       </div>
+
+      {stockError && (
+        <p role="alert" className="font-body text-body-sm text-error bg-error/10 rounded-md px-md py-sm">
+          {stockError}
+        </p>
+      )}
 
       <div className="bg-surface-container-low rounded-md shadow-card overflow-hidden">
         <div className="overflow-x-auto">

@@ -1,16 +1,15 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Sparkles, Plus, Check, Search, Tag, Filter, Store } from "lucide-react";
-import { products as allProducts, categories, stores } from "../data/mockData";
+import { categories } from "../data/categories";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 import { useInventory } from "../context/InventoryContext";
 import StoreCard from "../components/StoreCard";
 
-const storeName = (id) => stores.find((s) => s.id === id)?.name || "";
-
 const isDeal = (p) => p.isDeal || p.originalPrice > p.price;
 
-const matchesText = (product, term) => {
+const matchesText = (product, term, storeName) => {
   const q = term.trim().toLowerCase();
   if (!q) return true;
   return (
@@ -34,6 +33,8 @@ export default function DealsPage() {
 
   const { addToCart } = useCart();
   const { stockFor } = useInventory();
+  const { products: allProducts, stores } = useCatalog();
+  const storeName = useCallback((id) => stores.find((s) => s.id === id)?.name || "", [stores]);
 
   // Follow new searches made from the header while already on this page
   useEffect(() => {
@@ -60,15 +61,15 @@ export default function DealsPage() {
     return allProducts.filter((p) => {
       if (dealsOnly && !isDeal(p)) return false;
       const matchesCat = selectedCategory === "all" || p.categoryId === selectedCategory;
-      return matchesCat && matchesText(p, searchTerm);
+      return matchesCat && matchesText(p, searchTerm, storeName);
     });
-  }, [selectedCategory, searchTerm, dealsOnly]);
+  }, [selectedCategory, searchTerm, dealsOnly, allProducts, storeName]);
 
   const matchingStores = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return [];
     return stores.filter((s) => s.name.toLowerCase().includes(q));
-  }, [searchTerm]);
+  }, [searchTerm, stores]);
 
   const handleAddToCart = (product) => {
     addToCart(product, 1);

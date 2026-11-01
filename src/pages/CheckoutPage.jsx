@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ShieldCheck, MapPin, CreditCard, Tag, ArrowRight, ShoppingBasket, CheckCircle2, AlertCircle } from "lucide-react";
 import { useCart, FREE_DELIVERY_FROM } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useOrders } from "../context/OrderContext";
-import { useDeliveryLocation } from "../hooks/useDeliveryLocation";
+import { useDeliveryLocation, readLocationCoords } from "../hooks/useDeliveryLocation";
+import { api } from "../api/client";
 import DeliveryHeader from "../components/DeliveryHeader";
 
 export default function CheckoutPage() {
@@ -26,6 +27,29 @@ export default function CheckoutPage() {
   const [promoInput, setPromoInput] = useState("");
   const [promoFeedback, setPromoFeedback] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [etas, setEtas] = useState({}); // storeId -> { minutes, distanceKm }
+
+  // Delivery time from each store in the basket to the chosen area
+  const storeIds = deliveries.map((d) => d.storeId).join(",");
+  useEffect(() => {
+    if (!storeIds) return;
+    const coords = readLocationCoords();
+    const params = new URLSearchParams({ storeIds, area: deliveryArea });
+    if (coords) {
+      params.set("lat", coords.lat);
+      params.set("lng", coords.lng);
+    }
+    let cancelled = false;
+    api(`/delivery/estimate?${params}`)
+      .then(({ estimates }) => {
+        if (!cancelled) setEtas(Object.fromEntries(estimates.map((e) => [e.storeId, e])));
+      })
+      .catch(() => {}); // the ETA is a nice-to-have; checkout works without it
+    return () => {
+      cancelled = true;
+    };
+  }, [storeIds, deliveryArea]);
 
   if (cartItems.length === 0) {
     return (
@@ -71,29 +95,34 @@ export default function CheckoutPage() {
     return nextErrors;
   };
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     const nextErrors = validate();
     setErrors(nextErrors);
+    setSubmitError("");
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      const placed = placeOrders({
+    try {
+      const placed = await placeOrders({
         customerName: form.name.trim(),
-        email: user?.email,
-        address: `${form.address.trim()}, ${deliveryArea}`,
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        area: deliveryArea,
+        coords: readLocationCoords(),
         paymentMethod: form.paymentMethod,
-        deliveries,
+        cartItems,
         offerCode: appliedOffer?.code || null,
       });
-
       clearCart();
       const ids = placed.map((order) => order.id).join(",");
       navigate(`/orders?newOrderIds=${encodeURIComponent(ids)}`, { replace: true });
-    }, 600);
+    } catch (err) {
+      if (err.field) setErrors((prev) => ({ ...prev, [err.field]: err.message }));
+      else setSubmitError(err.message);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -204,6 +233,13 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {submitError && (
+            <p role="alert" className="flex items-start gap-2 font-body text-body-sm text-error bg-error/10 rounded-lg p-md">
+              <AlertCircle size={18} className="shrink-0" />
+              {submitError}
+            </p>
+          )}
+
           {/* Submit Action */}
           <button
             type="submit"
@@ -232,7 +268,7 @@ export default function CheckoutPage() {
           <div className="space-y-md max-h-80 overflow-y-auto pr-1">
             {deliveries.map((delivery, index) => (
               <div key={delivery.storeId} className="space-y-xs">
-                <DeliveryHeader delivery={delivery} index={index} count={deliveries.length} />
+                <DeliveryHeader delivery={delivery} index={index} count={deliveries.length} eta={etas[delivery.storeId]} />
                 <div className="divide-y divide-outline-variant/20">
                   {delivery.items.map(({ product, qty }) => (
                     <div key={product.id} className="py-sm flex items-center justify-between gap-md">

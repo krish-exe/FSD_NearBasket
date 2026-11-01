@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, Camera, Mic, MicOff, ShoppingBasket, Cookie, Droplet, SprayCan, Leaf, Croissant, Sparkles, ArrowRight } from "lucide-react";
 import StoreCard from "../components/StoreCard";
-import { categories, stores, products } from "../data/mockData";
+import { categories } from "../data/categories";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { searchTermFromImage } from "../utils/imageSearch";
@@ -17,6 +18,7 @@ const ICONS = {
 };
 
 export default function HomePage() {
+  const { stores, products } = useCatalog();
   const [searchTerm, setSearchTerm] = useState("");
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -60,7 +62,7 @@ export default function HomePage() {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow picking the same photo again
     if (!file) return;
-    const term = searchTermFromImage(file);
+    const term = searchTermFromImage(file, products);
     if (!term) return;
     setSearchTerm(term);
     navigate(`/deals?search=${encodeURIComponent(term)}`);
