@@ -1,26 +1,32 @@
 import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Package, Clock, ShoppingBag, ArrowRight, RotateCcw, CheckCircle2, Eye, MapPin, CreditCard, X } from "lucide-react";
+import { Package, Clock, ShoppingBag, ArrowRight, RotateCcw, CheckCircle2, Eye, MapPin, CreditCard, X, Navigation, Loader2 } from "lucide-react";
 import { useOrders } from "../context/OrderContext";
 import { useCart } from "../context/CartContext";
 import StatusBadge from "../components/StatusBadge";
-import { products as catalog } from "../data/mockData";
+import { useCatalog } from "../context/CatalogContext";
+import { minutesUntilArrival, formatClock, ACTIVE_STATUSES } from "../utils/orderStatus";
+import { useNow } from "../hooks/useNow";
+import { assetUrl } from "../api/client";
 
 export default function OrdersPage() {
   const [searchParams] = useSearchParams();
-  const newOrderId = searchParams.get("newOrderId");
-  const { orders } = useOrders();
-  const { addToCart, openCart } = useCart();
+  const newOrderIds = searchParams.get("newOrderIds")?.split(",").filter(Boolean) || [];
+  const { orders, loaded } = useOrders();
+  const { products: catalog } = useCatalog();
+  const { addItems, openCart } = useCart();
+  const now = useNow();
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [reorderedId, setReorderedId] = useState(null);
 
   const handleReorder = (order) => {
-    order.items.forEach(({ product, qty }) => {
-      // Order history stores a trimmed snapshot; re-add the full catalog product when it still exists
-      const current = catalog.find((p) => p.id === product.id) || product;
-      addToCart(current, qty);
-    });
+    // Order history stores a trimmed snapshot; re-add the full catalog product when it still exists
+    const items = order.items.map(({ product, qty }) => ({
+      product: catalog.find((p) => p.id === product.id) || product,
+      qty,
+    }));
+    addItems(items);
     setReorderedId(order.id);
     setTimeout(() => {
       setReorderedId(null);
@@ -50,14 +56,20 @@ export default function OrdersPage() {
       </div>
 
       {/* New Order Placed Toast Banner */}
-      {newOrderId && (
+      {newOrderIds.length > 0 && (
         <div className="bg-primary/10 border border-primary/30 rounded-lg p-md flex items-center justify-between text-primary font-label text-label-md animate-in fade-in">
           <div className="flex items-center gap-md">
             <CheckCircle2 size={24} className="shrink-0" />
             <div>
-              <p className="font-bold">Order Placed Successfully! (ID: {newOrderId})</p>
+              <p className="font-bold">
+                {newOrderIds.length > 1
+                  ? `Order Placed Successfully! ${newOrderIds.length} deliveries (IDs: ${newOrderIds.join(", ")})`
+                  : `Order Placed Successfully! (ID: ${newOrderIds[0]})`}
+              </p>
               <p className="font-body text-body-sm text-on-surface-variant">
-                Your neighborhood store is preparing your delivery right now.
+                {newOrderIds.length > 1
+                  ? "Each store is preparing its part of your order and will deliver it separately."
+                  : "Your neighborhood store is preparing your delivery right now."}
               </p>
             </div>
           </div>
@@ -65,7 +77,11 @@ export default function OrdersPage() {
       )}
 
       {/* Orders List */}
-      {orders.length === 0 ? (
+      {!loaded ? (
+        <div className="flex justify-center py-2xl text-primary">
+          <Loader2 size={32} className="animate-spin" />
+        </div>
+      ) : orders.length === 0 ? (
         <section className="bg-surface-container-lowest rounded-lg p-2xl text-center border border-outline-variant/30 space-y-md">
           <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mx-auto text-on-surface-variant">
             <Package size={40} />
@@ -101,9 +117,23 @@ export default function OrdersPage() {
                   <p className="font-body text-body-sm text-on-surface-variant flex items-center gap-1">
                     <Clock size={14} /> Placed on {order.formattedDate} • Store: <strong>{order.storeName}</strong>
                   </p>
+                  {ACTIVE_STATUSES.includes(order.status) && order.estimatedArrival && (
+                    <p className="font-body text-body-sm text-primary font-semibold">
+                      Arriving by {formatClock(order.estimatedArrival)} (about {minutesUntilArrival(order, now)} min)
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-md">
+                <div className="flex flex-wrap items-center gap-md">
+                  {order.status !== "Cancelled" && (
+                    <Link
+                      to={`/orders/${order.id}/track`}
+                      className="px-4 py-2 bg-surface-container-low text-on-surface font-label text-label-md rounded-full hover:bg-surface-container-high transition-colors flex items-center gap-1.5"
+                    >
+                      <Navigation size={16} />
+                      <span>Track Order</span>
+                    </Link>
+                  )}
                   <button
                     onClick={() => setSelectedOrder(order)}
                     className="px-4 py-2 bg-surface-container-low text-on-surface font-label text-label-md rounded-full hover:bg-surface-container-high transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -128,7 +158,7 @@ export default function OrdersPage() {
                     {order.items.slice(0, 3).map((item, idx) => (
                       <img
                         key={idx}
-                        src={item.product.image}
+                        src={assetUrl(item.product.image)}
                         alt={item.product.name}
                         className="inline-block h-12 w-12 rounded-full ring-2 ring-surface object-cover"
                       />
@@ -193,7 +223,7 @@ export default function OrdersPage() {
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="py-sm flex items-center justify-between gap-md">
                       <div className="flex items-center gap-md">
-                        <img src={item.product.image} alt={item.product.name} className="w-10 h-10 rounded-md object-cover" />
+                        <img src={assetUrl(item.product.image)} alt={item.product.name} className="w-10 h-10 rounded-md object-cover" />
                         <div>
                           <p className="font-body text-body-sm font-semibold text-on-surface">{item.product.name}</p>
                           <p className="font-body text-body-sm text-on-surface-variant">{item.product.unit} x {item.qty}</p>

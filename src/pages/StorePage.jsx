@@ -1,24 +1,29 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Star, Map, Plus, Minus, ShoppingBasket, Search, ArrowRight } from "lucide-react";
-import { stores as mockStores, products as mockProducts, categories as globalCategories } from "../data/mockData";
+import { categories as globalCategories } from "../data/categories";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useInventory, LOW_STOCK_THRESHOLD } from "../context/InventoryContext";
 import NotFoundPage from "./NotFoundPage";
+import { assetUrl } from "../api/client";
 
 export default function StorePage() {
+  const { stores, products } = useCatalog();
   const { storeId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get("category") || "all";
   const highlightedProductId = searchParams.get("product");
 
-  const store = mockStores.find((s) => s.id === storeId);
+  const store = stores.find((s) => s.id === storeId);
 
   const [activeCategory, setActiveCategory] = useState(categoryParam);
   const [searchTerm, setSearchTerm] = useState("");
 
   const {
     cartItems,
+    deliveries,
     subtotal,
     deliveryFee,
     appliedOffer,
@@ -29,6 +34,7 @@ export default function StorePage() {
   } = useCart();
 
   const { isLoggedIn } = useAuth();
+  const { stockFor } = useInventory();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,8 +45,8 @@ export default function StorePage() {
 
   // Everything this store sells, and the categories it actually stocks
   const allStoreProducts = useMemo(
-    () => (store ? mockProducts.filter((p) => p.storeId === store.id) : []),
-    [store]
+    () => (store ? products.filter((p) => p.storeId === store.id) : []),
+    [store, products]
   );
   const storeCategories = useMemo(
     () => globalCategories.filter((cat) => cat.id === "all" || allStoreProducts.some((p) => p.categoryId === cat.id)),
@@ -87,7 +93,7 @@ export default function StorePage() {
     <main className="flex-grow w-full max-w-content mx-auto px-margin-mobile md:px-margin-desktop py-xl space-y-xl">
       {/* Store Hero Banner */}
       <section className="relative rounded-xl overflow-hidden h-[260px] md:h-[320px] shadow-card">
-        <img src={store.banner || store.image} alt={store.name} className="w-full h-full object-cover" />
+        <img src={assetUrl(store.banner || store.image)} alt={store.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         
         <div className="absolute bottom-0 left-0 p-lg md:p-xl flex items-center gap-md z-10">
@@ -101,7 +107,7 @@ export default function StorePage() {
             <div className="flex flex-wrap items-center gap-2 text-white/90 font-body text-body-sm mt-1">
               <span className="flex items-center gap-1 font-semibold text-secondary-container">
                 <Star size={14} className="fill-secondary-container text-secondary-container" />
-                {store.rating} ({store.reviews} reviews)
+                {store.rating ? `${store.rating} (${store.reviews} reviews)` : "New on NearBasket"}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -182,6 +188,9 @@ export default function StorePage() {
               {storeProductsList.map((product) => {
                 const qtyInCart = getCartQuantity(product.id);
                 const isHighlighted = highlightedProductId === product.id;
+                const stockLeft = stockFor(product.id);
+                const isSoldOut = stockLeft === 0;
+                const atStockLimit = stockLeft !== null && qtyInCart >= stockLeft;
 
                 return (
                   <div
@@ -191,7 +200,7 @@ export default function StorePage() {
                     }`}
                   >
                     <div className="relative h-44 w-full bg-surface-container-low">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={assetUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                       {product.isDeal && (
                         <span className="absolute top-2 left-2 bg-secondary text-on-secondary text-xs font-bold px-2 py-0.5 rounded-full">
                           {product.dealTag || "DEAL"}
@@ -204,7 +213,12 @@ export default function StorePage() {
                         <h3 className="font-display text-headline-sm text-on-surface font-bold line-clamp-1">
                           {product.name}
                         </h3>
-                        <p className="font-body text-body-sm text-on-surface-variant">{product.unit}</p>
+                        <p className="font-body text-body-sm text-on-surface-variant">
+                          {product.unit}
+                          {stockLeft > 0 && stockLeft <= LOW_STOCK_THRESHOLD && (
+                            <span className="text-secondary font-semibold"> · Only {stockLeft} left</span>
+                          )}
+                        </p>
                       </div>
 
                       <div className="flex items-center justify-between pt-xs">
@@ -212,7 +226,7 @@ export default function StorePage() {
                           <span className="font-display text-headline-sm text-primary font-bold">
                             Rs. {product.price.toFixed(2)}
                           </span>
-                          {product.originalPrice && (
+                          {product.originalPrice > product.price && (
                             <span className="font-body text-body-sm text-on-surface-variant line-through ml-2">
                               Rs. {product.originalPrice}
                             </span>
@@ -232,11 +246,17 @@ export default function StorePage() {
                             </span>
                             <button
                               onClick={() => addToCart(product, 1)}
-                              className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                              disabled={atStockLimit}
+                              title={atStockLimit ? "No more in stock" : undefined}
+                              className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Plus size={14} />
                             </button>
                           </div>
+                        ) : isSoldOut ? (
+                          <span className="px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label text-label-md">
+                            Out of stock
+                          </span>
                         ) : (
                           <button
                             onClick={() => addToCart(product, 1)}
@@ -317,7 +337,7 @@ export default function StorePage() {
                 </div>
               )}
               <div className="flex justify-between text-on-surface-variant">
-                <span>Delivery Charges</span>
+                <span>Delivery Charges{deliveries.length > 1 && ` (${deliveries.length} stores)`}</span>
                 <span>{deliveryFee === 0 ? <span className="text-primary font-bold">FREE</span> : `Rs. ${deliveryFee.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between font-display text-headline-sm text-on-surface pt-2 border-t border-outline-variant/30 font-bold">

@@ -1,117 +1,95 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { api, setToken, getToken } from "../api/client";
 
 const AuthContext = createContext(null);
 
 const USER_STORAGE_KEY = "nearbasket_user";
-const ACCOUNTS_STORAGE_KEY = "nearbasket_accounts_v1";
 
-// There is no backend: registered accounts live in this browser's localStorage.
-// Passwords are salted and hashed so they are never stored in plain text.
-function loadAccounts() {
+// The last known user, so the header doesn't flash "Log in" while the session is checked
+function loadCachedUser() {
+  if (!getToken()) return null;
   try {
-    const stored = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
-function saveAccounts(accounts) {
+function cacheUser(user) {
   try {
-    localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+    if (user) localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_STORAGE_KEY);
   } catch {
-    // Storage unavailable (private mode); the account lasts for this session only
+    // Storage unavailable (private mode)
   }
-}
-
-const normalizeEmail = (email) => email.trim().toLowerCase();
-
-function randomSalt() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function hashPassword(password, salt) {
-  const data = new TextEncoder().encode(`${salt}:${password}`);
-  // crypto.subtle only exists on secure origins (https or localhost)
-  if (crypto.subtle) {
-    const digest = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  // Fallback for plain-http LAN testing: FNV-1a, enough to avoid storing the raw password
-  let hash = 0x811c9dc5;
-  for (const byte of data) {
-    hash ^= byte;
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return `fnv:${hash.toString(16)}`;
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(USER_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(loadCachedUser);
 
-  const startSession = (userInfo) => {
-    setUser(userInfo);
-    try {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userInfo));
-    } catch {
-      // Storage unavailable (private mode); stay logged in for this session only
-    }
-  };
-
-  // Resolves to { ok: true } or { ok: false, field, error }
-  const signup = async ({ name, email, phone, password }) => {
-    const key = normalizeEmail(email);
-    const accounts = loadAccounts();
-    if (accounts[key]) {
-      return { ok: false, field: "email", error: "An account with this email already exists. Please log in." };
-    }
-
-    const salt = randomSalt();
-    accounts[key] = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      salt,
-      passwordHash: await hashPassword(password, salt),
-    };
-    saveAccounts(accounts);
-    startSession({ name: accounts[key].name, email: accounts[key].email });
-    return { ok: true };
-  };
-
-  // Resolves to { ok: true } or { ok: false, field, error }
-  const login = async (email, password) => {
-    const account = loadAccounts()[normalizeEmail(email)];
-    if (!account) {
-      return { ok: false, field: "email", error: "No account found with this email. Check it or sign up." };
-    }
-    if ((await hashPassword(password, account.salt)) !== account.passwordHash) {
-      return { ok: false, field: "password", error: "Incorrect password. Please try again." };
-    }
-    startSession({ name: account.name, email: account.email });
-    return { ok: true };
+  const startSession = ({ token, user: account }) => {
+    setToken(token);
+    cacheUser(account);
+    setUser(account);
   };
 
   const logout = () => {
+    setToken(null);
+    cacheUser(null);
     setUser(null);
+  };
+
+  // Confirm the saved login is still valid when the app opens
+  useEffect(() => {
+    if (!getToken()) return;
+    api("/auth/me")
+      .then(({ user: account }) => {
+        cacheUser(account);
+        setUser(account);
+      })
+      .catch((e) => {
+        if (e.status === 401) logout();
+      });
+  }, []);
+
+  // Resolves to { ok: true, user } or { ok: false, field, error }
+  const signup = async ({ name, email, phone, password }) => {
     try {
-      localStorage.removeItem(USER_STORAGE_KEY);
-    } catch {
-      // ignore
+      const session = await api("/auth/signup", { method: "POST", body: { name, email, phone, password } });
+      startSession(session);
+      return { ok: true, user: session.user };
+    } catch (e) {
+      return { ok: false, field: e.field || "password", error: e.message };
+    }
+  };
+
+  // Creates a store owner account and their shop; resolves like signup
+  const registerShop = async (details) => {
+    try {
+      const session = await api("/auth/register-shop", { method: "POST", body: details });
+      startSession(session);
+      return { ok: true, user: session.user };
+    } catch (e) {
+      return { ok: false, field: e.field || "street", error: e.message };
+    }
+  };
+
+  // Resolves to { ok: true, user } or { ok: false, field, error }
+  const login = async (email, password) => {
+    try {
+      const session = await api("/auth/login", { method: "POST", body: { email, password } });
+      startSession(session);
+      return { ok: true, user: session.user };
+    } catch (e) {
+      return { ok: false, field: e.field || "password", error: e.message };
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoggedIn: !!user, isVendor: user?.role === "vendor", login, signup, registerShop, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

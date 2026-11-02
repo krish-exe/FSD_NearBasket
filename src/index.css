@@ -48,6 +48,9 @@ body {
   .animate-in.slide-in-from-right {
     animation-name: nb-slide-in-right;
   }
+  .animate-in.fade-in {
+    animation-name: nb-enter;
+  }
   .animate-in.zoom-in-50,
   .animate-in.zoom-in-95 {
     animation-name: nb-zoom-in;

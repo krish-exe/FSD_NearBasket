@@ -1,15 +1,16 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Sparkles, Plus, Check, Search, Tag, Filter, Store } from "lucide-react";
-import { products as allProducts, categories, stores } from "../data/mockData";
+import { categories } from "../data/categories";
+import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
+import { useInventory } from "../context/InventoryContext";
 import StoreCard from "../components/StoreCard";
-
-const storeName = (id) => stores.find((s) => s.id === id)?.name || "";
+import { assetUrl } from "../api/client";
 
 const isDeal = (p) => p.isDeal || p.originalPrice > p.price;
 
-const matchesText = (product, term) => {
+const matchesText = (product, term, storeName) => {
   const q = term.trim().toLowerCase();
   if (!q) return true;
   return (
@@ -32,6 +33,9 @@ export default function DealsPage() {
   const [addedItemIds, setAddedItemIds] = useState(new Set());
 
   const { addToCart } = useCart();
+  const { stockFor } = useInventory();
+  const { products: allProducts, stores } = useCatalog();
+  const storeName = useCallback((id) => stores.find((s) => s.id === id)?.name || "", [stores]);
 
   // Follow new searches made from the header while already on this page
   useEffect(() => {
@@ -58,15 +62,15 @@ export default function DealsPage() {
     return allProducts.filter((p) => {
       if (dealsOnly && !isDeal(p)) return false;
       const matchesCat = selectedCategory === "all" || p.categoryId === selectedCategory;
-      return matchesCat && matchesText(p, searchTerm);
+      return matchesCat && matchesText(p, searchTerm, storeName);
     });
-  }, [selectedCategory, searchTerm, dealsOnly]);
+  }, [selectedCategory, searchTerm, dealsOnly, allProducts, storeName]);
 
   const matchingStores = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return [];
     return stores.filter((s) => s.name.toLowerCase().includes(q));
-  }, [searchTerm]);
+  }, [searchTerm, stores]);
 
   const handleAddToCart = (product) => {
     addToCart(product, 1);
@@ -199,7 +203,7 @@ export default function DealsPage() {
                   className="bg-surface-container-lowest rounded-lg overflow-hidden shadow-card card-hover-lift border border-outline-variant/20 flex flex-col justify-between"
                 >
                   <div className="relative h-48 w-full bg-surface-container-low">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={assetUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                     
                     {/* Deal Badge */}
                     {isDeal(product) && (
@@ -247,26 +251,32 @@ export default function DealsPage() {
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => handleAddToCart(product)}
-                        className={`px-4 py-2.5 rounded-full font-label text-label-md flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 ${
-                          isAdded
-                            ? "bg-primary text-on-primary"
-                            : "bg-primary-container text-on-primary hover:bg-primary"
-                        }`}
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check size={16} />
-                            Added
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={16} />
-                            Add to Cart
-                          </>
-                        )}
-                      </button>
+                      {stockFor(product.id) === 0 ? (
+                        <span className="px-4 py-2.5 rounded-full bg-surface-container-high text-on-surface-variant font-label text-label-md">
+                          Out of stock
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          className={`px-4 py-2.5 rounded-full font-label text-label-md flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 ${
+                            isAdded
+                              ? "bg-primary text-on-primary"
+                              : "bg-primary-container text-on-primary hover:bg-primary"
+                          }`}
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check size={16} />
+                              Added
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={16} />
+                              Add to Cart
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

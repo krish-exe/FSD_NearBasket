@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { LayoutGrid, Archive, ShoppingBag, Settings, Bell, HelpCircle, Plus, Store } from "lucide-react";
 
 const NAV = [
@@ -44,11 +44,18 @@ export default function VendorLayout() {
         </nav>
 
         <div className="flex flex-col gap-md pt-lg border-t border-outline-variant/20">
-          <button className="w-full flex items-center justify-center gap-2 bg-primary text-on-primary font-label text-label-md py-3 rounded-full hover:bg-primary-container transition-colors shadow-sm">
+          <Link
+            to="/vendor/inventory?add=1"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-on-primary font-label text-label-md py-3 rounded-full shadow-sm hover:bg-primary-container transition-colors"
+          >
             <Plus size={18} />
             Add New Product
-          </button>
-          <button className="w-full flex items-center gap-2 text-on-surface-variant font-body text-body-sm hover:text-primary transition-colors">
+          </Link>
+          <button
+            disabled
+            title="Coming soon"
+            className="w-full flex items-center gap-2 text-on-surface-variant font-body text-body-sm opacity-40 cursor-not-allowed"
+          >
             <HelpCircle size={18} />
             Help Center
           </button>
@@ -58,21 +65,33 @@ export default function VendorLayout() {
       {/* Main */}
       <div className="flex-grow flex flex-col min-w-0">
         <header className="h-16 border-b border-outline-variant/20 bg-surface flex items-center justify-between px-lg shrink-0">
-          <h1 className="font-display text-headline-sm font-bold text-on-surface">Shop Manager</h1>
+          <p className="font-display text-headline-sm font-bold text-on-surface">Shop Manager</p>
           <div className="flex items-center gap-md">
             <span className="flex items-center gap-1 font-label text-label-md text-primary">
               <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
               Online
             </span>
-            <button className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <button
+              disabled
+              title="Notifications coming soon"
+              aria-label="Notifications"
+              className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant opacity-40 cursor-not-allowed"
+            >
               <Bell size={20} />
             </button>
-            <button className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <Link
+              to="/vendor/settings"
+              aria-label="Shop settings"
+              className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            >
               <Settings size={20} />
-            </button>
-            <button className="px-4 py-1.5 border border-outline-variant rounded-full font-label text-label-md text-on-surface hover:bg-surface-container-high transition-colors">
-              Profile
-            </button>
+            </Link>
+            <Link
+              to="/"
+              className="px-4 py-1.5 border border-outline-variant rounded-full font-label text-label-md text-on-surface hover:bg-surface-container-high transition-colors"
+            >
+              Back to NearBasket
+            </Link>
           </div>
         </header>
         <main className="flex-grow p-lg md:p-xl overflow-y-auto">

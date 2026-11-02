@@ -1,17 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { MapPin, ChevronDown, Search, Camera, Mic, MicOff, CircleUserRound, ShoppingCart, LocateFixed, LogOut, Tag, Package, Sparkles, X, Check, Loader2 } from "lucide-react";
+import { MapPin, ChevronDown, Search, Camera, Mic, MicOff, CircleUserRound, ShoppingCart, LocateFixed, LogOut, Tag, Package, Sparkles, X, Check, Loader2, Store } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
+import { saveLocationCoords, DEFAULT_LOCATION } from "../hooks/useDeliveryLocation";
 import { searchTermFromImage } from "../utils/imageSearch";
-import { products as mockProducts } from "../data/mockData";
+import { useCatalog } from "../context/CatalogContext";
+import { assetUrl } from "../api/client";
 
 const POPULAR_LOCATIONS = [
-  "Indiranagar, Bengaluru",
-  "Koramangala, Bengaluru",
-  "HSR Layout, Bengaluru",
-  "Whitefield, Bengaluru",
+  "Ghatkopar East, Mumbai",
+  "Ghatkopar West, Mumbai",
+  "Vidyavihar, Mumbai",
+  "Vikhroli, Mumbai",
 ];
 
 export default function Header() {
@@ -20,14 +22,16 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(() => {
-    return localStorage.getItem("nearbasket_location") || "Home - Near Indiranagar, Bengaluru";
+    return localStorage.getItem("nearbasket_location") || DEFAULT_LOCATION;
   });
   const [locationSearch, setLocationSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, isVendor, logout } = useAuth();
   const { itemCount, openCart } = useCart();
+  const { products } = useCatalog();
   const navigate = useNavigate();
   const searchRef = useRef(null);
   const locationContainerRef = useRef(null);
@@ -35,7 +39,7 @@ export default function Header() {
 
   // Search autocomplete results
   const searchResults = searchQuery.trim()
-    ? mockProducts.filter(
+    ? products.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -65,12 +69,14 @@ export default function Header() {
     };
   }, []);
 
-  const updateLocation = (newLoc) => {
+  // coords is the exact GPS position when known; typed or picked areas are looked up by the server
+  const updateLocation = (newLoc, coords = null) => {
     if (!newLoc || !newLoc.trim()) return;
     const trimmed = newLoc.trim();
     setCurrentLocation(trimmed);
     try {
       localStorage.setItem("nearbasket_location", trimmed);
+      saveLocationCoords(coords);
       window.dispatchEvent(new Event("nearbasket_location_change"));
     } catch {
       // ignore local storage errors
@@ -97,6 +103,7 @@ export default function Header() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
+        const gpsPoint = { lat: latitude, lng: longitude };
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
@@ -104,14 +111,14 @@ export default function Header() {
           if (res.ok) {
             const data = await res.json();
             const suburb = data.address?.suburb || data.address?.neighbourhood || data.address?.road || "";
-            const city = data.address?.city || data.address?.town || data.address?.state_district || "Bengaluru";
+            const city = data.address?.city || data.address?.town || data.address?.state_district || "Mumbai";
             const name = [suburb, city].filter(Boolean).join(", ");
-            updateLocation(name || `Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+            updateLocation(name || `Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
           } else {
-            updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+            updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
           }
         } catch {
-          updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`);
+          updateLocation(`Location (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`, gpsPoint);
         } finally {
           setIsLocating(false);
         }
@@ -168,8 +175,12 @@ export default function Header() {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow picking the same photo again
     if (!file) return;
-    const term = searchTermFromImage(file);
-    if (!term) return;
+    const term = searchTermFromImage(file, products);
+    if (!term) {
+      setPhotoMessage("Couldn't recognise that photo. Try typing the item name instead.");
+      return;
+    }
+    setPhotoMessage("");
     setSearchQuery(term);
     setIsSearchFocused(false);
     navigate(`/deals?search=${encodeURIComponent(term)}`);
@@ -215,7 +226,7 @@ export default function Header() {
             </button>
 
             {locationOpen && (
-              <div className="fixed inset-x-3 top-18 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 w-auto sm:w-84 md:w-96 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 p-4 space-y-3">
+              <div className="fixed inset-x-3 top-18 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 sm:mt-2 w-auto sm:w-80 md:w-96 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 p-4 space-y-3">
                 <div className="flex justify-between items-center pb-2 border-b border-outline-variant/30">
                   <div className="flex items-center gap-1.5">
                     <MapPin className="text-primary" size={18} />
@@ -319,6 +330,7 @@ export default function Header() {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setIsSearchFocused(true);
+                setPhotoMessage("");
               }}
               onFocus={() => setIsSearchFocused(true)}
             />
@@ -370,6 +382,7 @@ export default function Header() {
                 : "Couldn't hear that, try again."}
             </p>
           )}
+          {photoMessage && <p className="absolute mt-1 text-[11px] text-error font-body">{photoMessage}</p>}
 
           {/* Autocomplete Dropdown */}
           {isSearchFocused && searchQuery.trim().length > 0 && (
@@ -382,7 +395,7 @@ export default function Header() {
                     className="w-full flex items-center gap-md p-md hover:bg-surface-container-low transition-colors text-left cursor-pointer"
                   >
                     <img
-                      src={product.image}
+                      src={assetUrl(product.image)}
                       alt={product.name}
                       className="w-12 h-12 rounded-md object-cover border border-outline-variant/30 shrink-0"
                     />
@@ -491,6 +504,16 @@ export default function Header() {
                       <Package className="text-on-surface-variant" size={18} />
                       <span className="font-label text-label-md text-on-surface">My Orders</span>
                     </Link>
+                    {isVendor && (
+                      <Link
+                        to="/vendor"
+                        onClick={() => setAccountOpen(false)}
+                        className="w-full flex items-center gap-md px-md py-2.5 hover:bg-surface-container-low transition-colors text-left"
+                      >
+                        <Store className="text-on-surface-variant" size={18} />
+                        <span className="font-label text-label-md text-on-surface">Vendor Hub</span>
+                      </Link>
+                    )}
                     <Link
                       to="/offers"
                       onClick={() => setAccountOpen(false)}

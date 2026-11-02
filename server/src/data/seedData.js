@@ -1,59 +1,54 @@
-export const categories = [
-  { id: "all", name: "All Items", icon: "basket", bg: "bg-surface-container", fg: "text-primary" },
-  { id: "fruits-veg", name: "Fruits & Veggies", icon: "leaf", bg: "bg-primary-fixed", fg: "text-on-primary-fixed-variant" },
-  { id: "dairy", name: "Dairy & Eggs", icon: "droplet", bg: "bg-tertiary-fixed", fg: "text-on-tertiary-fixed" },
-  { id: "bakery", name: "Bakery & Bread", icon: "croissant", bg: "bg-secondary-fixed", fg: "text-on-secondary-fixed" },
-  { id: "snacks", name: "Snacks & Drinks", icon: "cookie", bg: "bg-secondary-fixed-dim", fg: "text-on-secondary-fixed-variant" },
-  { id: "staples", name: "Staples & Grains", icon: "basket", bg: "bg-surface-container-high", fg: "text-primary" },
-  { id: "household", name: "Household Care", icon: "spray", bg: "bg-surface-container", fg: "text-primary" },
-];
 
 export const stores = [
   {
     id: "green-valley-organics",
+    location: { lat: 19.084, lng: 72.9128 },
+    area: "Ghatkopar East",
     name: "Green Valley Organics",
     rating: 4.9,
     reviews: 340,
-    distance: "800m away",
     delivery: "Delivery in 20-25 mins",
-    status: "open",
-    address: "102 Indiranagar 100ft Rd, Bengaluru",
+    hours: { open: "07:00", close: "21:00" },
+    address: "Shop 3, Pant Nagar, Ghatkopar East, Mumbai",
     banner: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800&auto=format&fit=crop",
   },
   {
     id: "sharma-general-store",
+    location: { lat: 19.0809, lng: 72.9065 },
+    area: "Ghatkopar East",
     name: "Sharma General Store",
     rating: 4.8,
     reviews: 210,
-    distance: "450m away",
     delivery: "Delivery in 15-20 mins",
-    status: "open",
-    address: "45 HAL 2nd Stage, Bengaluru",
+    hours: { open: "08:00", close: "22:00" },
+    address: "12 Tilak Road, Ghatkopar East, Mumbai",
     banner: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?q=80&w=800&auto=format&fit=crop",
   },
   {
     id: "fresh-mart-daily",
+    location: { lat: 19.0905, lng: 72.904 },
+    area: "Ghatkopar West",
     name: "Fresh Mart Daily",
     rating: 4.6,
     reviews: 156,
-    distance: "1.2km away",
     delivery: "Delivery in 30 mins",
-    status: "open",
-    address: "78 Koramangala 4th Block, Bengaluru",
+    hours: { open: "06:00", close: "23:00" },
+    address: "78 LBS Marg, Ghatkopar West, Mumbai",
     banner: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=800&auto=format&fit=crop",
   },
   {
     id: "punjabi-spice-bazaar",
+    location: { lat: 19.0795, lng: 72.8971 },
+    area: "Vidyavihar",
     name: "Punjabi Spice Bazaar",
     rating: 4.7,
     reviews: 268,
-    distance: "600m away",
     delivery: "Delivery in 18 mins",
-    status: "open",
-    address: "12 CMH Road, Indiranagar, Bengaluru",
+    hours: { open: "09:00", close: "21:30" },
+    address: "5 Station Road, Vidyavihar West, Mumbai",
     banner: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=1600&auto=format&fit=crop",
     image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=800&auto=format&fit=crop",
   },
@@ -255,7 +250,7 @@ export const products = [
     categoryId: "snacks",
     storeId: "sharma-general-store",
     rating: 4.8,
-    image: "https://images.unsplash.com/photo-1508061252966-f7266b0337c7?q=80&w=600&auto=format&fit=crop",
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Almonds_1.jpg/500px-Almonds_1.jpg",
     description: "Crunchy lightly salted premium roasted almonds."
   },
   {
@@ -572,133 +567,25 @@ export const offers = [
   }
 ];
 
-export const inventoryItems = [
-  {
-    id: "VEG-001",
-    name: "Organic Asparagus",
-    subtitle: "Local farm",
-    category: "Produce",
-    price: "Rs. 249",
-    stock: 45,
-    status: "Active",
-    image: "https://images.unsplash.com/photo-1515471209610-2b0c229d3128?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "BAK-042",
-    name: "Artisan Sourdough",
-    subtitle: "Fresh baked daily",
-    category: "Bakery",
-    price: "Rs. 149",
-    stock: 2,
-    status: "Low Stock",
-    warning: true,
-    image: "https://images.unsplash.com/photo-1585478259715-4d3a5f5b8b9a?q=80&w=200&auto=format&fit=crop",
-  },
-  {
-    id: "PAN-112",
-    name: "Local Honey (16oz)",
-    subtitle: "Wildflower blend",
-    category: "Pantry",
-    price: "Rs. 320",
-    stock: 18,
-    status: "Draft",
-    image: null,
-  },
+// One vendor login per store; all seeded accounts share SEED_PASSWORD (see .env.example)
+export const vendorAccounts = [
+  { name: "Ramesh Sharma", email: "sharma@nearbasket.test", phone: "9876543210", storeId: "sharma-general-store" },
+  { name: "Anita Rao", email: "greenvalley@nearbasket.test", phone: "9876500011", storeId: "green-valley-organics" },
+  { name: "Vikram Shetty", email: "freshmart@nearbasket.test", phone: "9876500022", storeId: "fresh-mart-daily" },
+  { name: "Harpreet Singh", email: "punjabi@nearbasket.test", phone: "9876500033", storeId: "punjabi-spice-bazaar" },
 ];
 
-export const initialOrders = [
-  {
-    id: "NB-8492",
-    date: "2026-10-02T18:30:00.000Z",
-    formattedDate: "02 Oct 2026, 06:30 PM",
-    customer: "Priya Patel",
-    email: "priya@example.com",
-    storeName: "Green Valley Organics",
-    storeId: "green-valley-organics",
-    items: [
-      {
-        product: {
-          id: "apples-red",
-          name: "Organic Red Apples",
-          unit: "1 kg",
-          price: 180,
-          image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      },
-      {
-        product: {
-          id: "sourdough-artisan",
-          name: "Artisan Sourdough Loaf",
-          unit: "1 loaf (400g)",
-          price: 149,
-          image: "https://images.unsplash.com/photo-1585478259715-4d3a5f5b8b9a?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      }
-    ],
-    subtotal: 329,
-    discount: 50,
-    deliveryFee: 25,
-    total: 304,
-    offerCode: "NEAR50",
-    paymentMethod: "UPI (Google Pay)",
-    paymentStatus: "Paid",
-    status: "Delivered",
-    address: "Flat 402, Sunshine Apartments, Indiranagar, Bengaluru"
-  },
-  {
-    id: "NB-8491",
-    date: "2026-09-28T14:15:00.000Z",
-    formattedDate: "28 Sep 2026, 02:15 PM",
-    customer: "Priya Patel",
-    email: "priya@example.com",
-    storeName: "Sharma General Store",
-    storeId: "sharma-general-store",
-    items: [
-      {
-        product: {
-          id: "basmati-rice",
-          name: "Premium Aged Basmati Rice",
-          unit: "5 kg bag",
-          price: 649,
-          image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      },
-      {
-        product: {
-          id: "roasted-almonds",
-          name: "California Roasted Almonds",
-          unit: "250g pack",
-          price: 299,
-          image: "https://images.unsplash.com/photo-1508061252966-f7266b0337c7?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      }
-    ],
-    subtotal: 948,
-    discount: 0,
-    deliveryFee: 25,
-    total: 973,
-    offerCode: null,
-    paymentMethod: "Cash on Delivery",
-    paymentStatus: "Paid",
-    status: "Delivered",
-    address: "Flat 402, Sunshine Apartments, Indiranagar, Bengaluru"
-  }
-];
+// A ready-made customer login for demos
+export const demoCustomer = { name: "Priya Patel", email: "priya@example.com", phone: "9123456780" };
 
-export const recentOrders = [
-  { id: "#NB-8492", customer: "Priya Patel", items: "4 items", total: "Rs. 304.00", status: "Pending" },
-  { id: "#NB-8491", customer: "Aiden M.", items: "12 items", total: "Rs. 973.00", status: "Accepted" },
-  { id: "#NB-8490", customer: "Sarah Jenkins", items: "2 items", total: "Rs. 182.50", status: "Accepted" },
-  { id: "#NB-8489", customer: "David L.", items: "6 items", total: "Rs. 459.00", status: "Completed" },
-];
-
-export const popularProducts = [
-  { name: "Organic Bananas (Bunch)", sold: 42, pct: 100 },
-  { name: "Local Whole Milk (1 Litre)", sold: 38, pct: 90 },
-  { name: "Fresh Sourdough Bread", sold: 24, pct: 57 },
-  { name: "Free-Range Brown Eggs", sold: 19, pct: 45 },
-];
+// Starting stock for Sharma General Store's products. Only these products are stock-tracked;
+// other stores' products are treated as always available.
+export const initialStock = {
+  "organic-tomatoes": 40,
+  "paneer-fresh": 3,
+  "whole-wheat-bread": 12,
+  "roasted-almonds": 25,
+  "basmati-rice": 18,
+  "whole-wheat-atta": 0,
+  "surface-cleaner": 9,
+};
