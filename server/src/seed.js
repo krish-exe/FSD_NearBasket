@@ -1,4 +1,4 @@
-// Fills the database with the starting stores, products, offers and demo accounts.
+// Fills the database with the starting stores, products, offers and demo accounts, and no orders.
 // It wipes those collections first, so only run it on a fresh or test database.
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
@@ -7,7 +7,7 @@ import Product from "./models/Product.js";
 import Offer from "./models/Offer.js";
 import User from "./models/User.js";
 import Order from "./models/Order.js";
-import { stores, products, offers, vendorAccounts, demoCustomer, initialStock, initialOrders } from "./data/seedData.js";
+import { stores, products, offers, vendorAccounts, demoCustomer, initialStock } from "./data/seedData.js";
 
 if (!process.env.MONGODB_URI || !process.env.SEED_PASSWORD) {
   console.error("Set MONGODB_URI and SEED_PASSWORD in server/.env first.");
@@ -41,21 +41,10 @@ await Offer.insertMany(offers);
 
 const passwordHash = await bcrypt.hash(process.env.SEED_PASSWORD, 10);
 await User.insertMany(vendorAccounts.map((vendor) => ({ ...vendor, role: "vendor", passwordHash })));
-const customer = await User.create({ ...demoCustomer, passwordHash });
-
-await Order.insertMany(
-  initialOrders.map((order) => ({
-    ...order,
-    checkoutId: order.id,
-    user: customer._id,
-    date: new Date(order.date),
-    statusTimes: { Placed: new Date(order.date), [order.status]: new Date(order.date) },
-    route: { source: "none", path: [] },
-  }))
-);
+await User.create({ ...demoCustomer, passwordHash });
 
 console.log(
   `Seeded ${stores.length} stores, ${products.length} products, ${offers.length} offers, ` +
-    `${vendorAccounts.length + 1} accounts and ${initialOrders.length} orders.`
+    `${vendorAccounts.length + 1} accounts. No orders yet.`
 );
 await mongoose.disconnect();

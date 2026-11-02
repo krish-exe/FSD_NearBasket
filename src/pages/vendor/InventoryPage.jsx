@@ -1,31 +1,42 @@
-import { useState } from "react";
-import { useCatalog } from "../../context/CatalogContext";
-import { useAuth } from "../../context/AuthContext";
-import { Search, FileUp, Minus, Plus, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, Minus, Plus, AlertTriangle, PackagePlus, Loader2 } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
+import ProductFormModal from "../../components/ProductFormModal";
 import { categories } from "../../data/categories";
-import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
-
+import { LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
+import { useVendorProducts } from "../../hooks/useVendorProducts";
+import { assetUrl } from "../../api/client";
 
 const stockStatus = (stock) => {
+  if (stock === null) return "Active";
   if (stock === 0) return "Out of Stock";
   if (stock <= LOW_STOCK_THRESHOLD) return "Low Stock";
   return "Active";
 };
 
 export default function InventoryPage() {
-  const { stockFor, adjustStock: saveStock } = useInventory();
-  const { products } = useCatalog();
-  const { user } = useAuth();
+  const { products: storeProducts, loaded, error, addProduct, updateProduct, deleteProduct, adjustStock: saveStock } =
+    useVendorProducts();
   const [stockError, setStockError] = useState("");
+  // null = closed, "new" = adding, or the product being edited
+  const [editing, setEditing] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const storeProducts = products.filter((p) => p.storeId === user.storeId);
+  // The sidebar's "Add New Product" button links here with ?add=1
+  useEffect(() => {
+    if (searchParams.get("add")) {
+      setEditing("new");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const storeCategories = categories.filter(
     (cat) => cat.id === "all" || storeProducts.some((p) => p.categoryId === cat.id)
   );
 
   const adjustStock = async (productId, delta) => {
-    setStockError((await saveStock(productId, delta)) || "");
+    setStockError((await saveStock(productId, delta))?.message || "");
   };
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("all");
@@ -67,19 +78,18 @@ export default function InventoryPage() {
             ))}
           </select>
           <button
-            disabled
-            title="Coming soon"
-            className="flex items-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-full font-label text-label-md opacity-40 cursor-not-allowed"
+            onClick={() => setEditing("new")}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-on-primary rounded-full font-label text-label-md hover:bg-primary-container transition-colors"
           >
-            <FileUp size={16} />
-            Bulk Import
+            <PackagePlus size={16} />
+            Add Product
           </button>
         </div>
       </div>
 
-      {stockError && (
+      {(stockError || error) && (
         <p role="alert" className="font-body text-body-sm text-error bg-error/10 rounded-md px-md py-sm">
-          {stockError}
+          {stockError || error}
         </p>
       )}
 
@@ -102,18 +112,24 @@ export default function InventoryPage() {
               {visibleItems.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-lg py-xl text-center font-body text-body-md text-on-surface-variant">
-                    No products match your filters.
+                    {!loaded ? (
+                      <Loader2 size={24} className="animate-spin text-primary mx-auto" />
+                    ) : storeProducts.length === 0 ? (
+                      "Your shop has no products yet. Use Add Product to list your first item."
+                    ) : (
+                      "No products match your filters."
+                    )}
                   </td>
                 </tr>
               )}
               {visibleItems.map((item) => {
-                const stock = stockFor(item.id) ?? 0;
-                const warning = stock <= LOW_STOCK_THRESHOLD;
+                const stock = item.stock ?? null;
+                const warning = stock !== null && stock <= LOW_STOCK_THRESHOLD;
                 return (
                   <tr key={item.id} className={`border-b border-outline-variant/10 last:border-0 ${warning ? "bg-secondary-container/5" : ""}`}>
                     <td className="px-lg py-md">
                       <div className="w-12 h-12 rounded-md overflow-hidden bg-surface-container-high">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        <img src={assetUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
                       </div>
                     </td>
                     <td className="px-lg py-md">
@@ -127,32 +143,36 @@ export default function InventoryPage() {
                     <td className="px-lg py-md font-body text-body-md text-on-surface">{item.category}</td>
                     <td className="px-lg py-md font-label text-label-md text-primary font-semibold">Rs. {item.price}</td>
                     <td className="px-lg py-md">
-                      <div className={`flex items-center gap-2 border rounded-md px-2 py-1 w-fit ${warning ? "border-error/40" : "border-outline-variant"}`}>
-                        <button
-                          onClick={() => adjustStock(item.id, -1)}
-                          disabled={stock === 0}
-                          aria-label={`Decrease stock of ${item.name}`}
-                          className="text-on-surface-variant hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className={`font-label text-label-md w-6 text-center ${warning ? "text-error" : "text-on-surface"}`}>
-                          {stock}
-                        </span>
-                        <button
-                          onClick={() => adjustStock(item.id, 1)}
-                          aria-label={`Increase stock of ${item.name}`}
-                          className="text-on-surface-variant hover:text-primary"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
+                      {stock === null ? (
+                        <span className="font-body text-body-sm text-on-surface-variant">Not tracked</span>
+                      ) : (
+                        <div className={`flex items-center gap-2 border rounded-md px-2 py-1 w-fit ${warning ? "border-error/40" : "border-outline-variant"}`}>
+                          <button
+                            onClick={() => adjustStock(item.id, -1)}
+                            disabled={stock === 0}
+                            aria-label={`Decrease stock of ${item.name}`}
+                            className="text-on-surface-variant hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className={`font-label text-label-md w-6 text-center ${warning ? "text-error" : "text-on-surface"}`}>
+                            {stock}
+                          </span>
+                          <button
+                            onClick={() => adjustStock(item.id, 1)}
+                            aria-label={`Increase stock of ${item.name}`}
+                            className="text-on-surface-variant hover:text-primary"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-lg py-md">
                       <StatusBadge status={stockStatus(stock)} />
                     </td>
                     <td className="px-lg py-md">
-                      <button disabled title="Coming soon" className="font-label text-label-md text-primary opacity-40 cursor-not-allowed">
+                      <button onClick={() => setEditing(item)} className="font-label text-label-md text-primary hover:underline">
                         Edit
                       </button>
                     </td>
@@ -169,6 +189,15 @@ export default function InventoryPage() {
           </p>
         </div>
       </div>
+
+      {editing && (
+        <ProductFormModal
+          product={editing === "new" ? null : editing}
+          onSave={(form) => (editing === "new" ? addProduct(form) : updateProduct(editing.id, form))}
+          onDelete={() => deleteProduct(editing.id)}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }

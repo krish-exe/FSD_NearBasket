@@ -4,6 +4,7 @@ import { X, ShoppingBasket, Plus, Minus, Trash2, Tag, ArrowRight, CheckCircle, A
 import { useCart, FREE_DELIVERY_FROM } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import DeliveryHeader from "./DeliveryHeader";
+import { assetUrl } from "../api/client";
 
 export default function CartDrawer() {
   const {
@@ -112,7 +113,7 @@ export default function CartDrawer() {
                     {delivery.items.map(({ product, qty }) => (
                       <div key={product.id} className="pt-md first:pt-0 flex gap-md items-center">
                         <img
-                          src={product.image}
+                          src={assetUrl(product.image)}
                           alt={product.name}
                           className="w-16 h-16 rounded-md object-cover border border-outline-variant/30 shrink-0"
                         />

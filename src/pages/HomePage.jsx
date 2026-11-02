@@ -8,6 +8,7 @@ import { useDeliveryLocation } from "../hooks/useDeliveryLocation";
 import { useCart } from "../context/CartContext";
 import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { searchTermFromImage } from "../utils/imageSearch";
+import { assetUrl } from "../api/client";
 
 const ICONS = {
   basket: ShoppingBasket,
@@ -220,7 +221,7 @@ export default function HomePage() {
                 className="bg-surface-container-lowest rounded-lg p-md border border-outline-variant/20 shadow-card flex flex-col justify-between"
               >
                 <div className="relative h-36 w-full rounded-md overflow-hidden bg-surface-container-low mb-sm">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={assetUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                   <span className="absolute top-2 left-2 bg-secondary text-on-secondary text-xs font-bold px-2 py-0.5 rounded-full">
                     {product.dealTag}
                   </span>
@@ -258,10 +259,21 @@ export default function HomePage() {
         {stores.length === 0 ? (
           <div className="bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-xl text-center space-y-sm">
             <MapPin size={32} className="mx-auto text-on-surface-variant" />
-            <h3 className="font-display text-headline-sm text-on-surface">No stores deliver to {deliveryArea} yet</h3>
-            <p className="font-body text-body-md text-on-surface-variant max-w-md mx-auto">
-              NearBasket stores deliver within {location.radiusKm} km. Pick a nearer area from the location menu at the top.
-            </p>
+            {location.found ? (
+              <>
+                <h3 className="font-display text-headline-sm text-on-surface">No stores deliver to {deliveryArea} yet</h3>
+                <p className="font-body text-body-md text-on-surface-variant max-w-md mx-auto">
+                  NearBasket stores deliver within {location.radiusKm} km. Pick a nearer area from the location menu at the top.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="font-display text-headline-sm text-on-surface">We couldn't find {deliveryArea} on the map</h3>
+                <p className="font-body text-body-md text-on-surface-variant max-w-md mx-auto">
+                  Try your 6-digit pincode or a nearby area name in the location menu at the top, or use your current location.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">

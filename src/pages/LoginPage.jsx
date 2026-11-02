@@ -120,6 +120,12 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        <p className="text-center font-body text-body-sm text-on-surface-variant">
+          Own a shop?{" "}
+          <Link to="/sell" className="text-primary font-semibold hover:underline">
+            Sell on NearBasket
+          </Link>
+        </p>
       </div>
     </main>
   );

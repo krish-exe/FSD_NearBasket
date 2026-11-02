@@ -35,11 +35,6 @@ export function CatalogProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  // Swaps in a product the server just returned (e.g. after a stock change)
-  const replaceProduct = useCallback((product) => {
-    setCatalog((prev) => prev && { ...prev, products: prev.products.map((p) => (p.id === product.id ? product : p)) });
-  }, []);
-
   if (!catalog) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-md bg-surface text-on-surface-variant px-margin-mobile text-center">
@@ -65,7 +60,7 @@ export function CatalogProvider({ children }) {
   }
 
   return (
-    <CatalogContext.Provider value={{ ...catalog, refresh, replaceProduct }}>{children}</CatalogContext.Provider>
+    <CatalogContext.Provider value={{ ...catalog, refresh }}>{children}</CatalogContext.Provider>
   );
 }
 

@@ -12,7 +12,7 @@ export default function Footer() {
           <a className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" href="#">
             About Us
           </a>
-          <Link className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" to="/vendor">
+          <Link className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" to="/sell">
             Sell on NearBasket
           </Link>
           <a className="font-body text-body-md text-on-surface-variant hover:underline hover:text-primary transition-all" href="#">

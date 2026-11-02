@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Store, MapPin, Clock, BadgeCheck, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { api } from "../../api/client";
 import { useCatalog } from "../../context/CatalogContext";
+
+// The map library is only downloaded when this page needs it
+const ShopAreaMap = lazy(() => import("../../components/ShopAreaMap"));
 
 const SHOP_TYPES = ["Kirana / Grocery", "Bakery", "Pharmacy"];
 
@@ -30,11 +33,13 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState({});
   const [feedback, setFeedback] = useState(null); // { ok, message }
   const [isSaving, setIsSaving] = useState(false);
-  const { refresh: refreshCatalog } = useCatalog();
+  const { refresh: refreshCatalog, location: catalogLocation } = useCatalog();
+  const [store, setStore] = useState(null); // where the shop sits on the map
 
   useEffect(() => {
     api("/vendor/store")
-      .then(({ settings }) => {
+      .then(({ store: shop, settings }) => {
+        setStore(shop);
         setSaved(settings);
         setForm(settings);
       })
@@ -62,7 +67,8 @@ export default function SettingsPage() {
     const cleaned = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()]));
     setIsSaving(true);
     try {
-      const { settings } = await api("/vendor/store/settings", { method: "PUT", body: cleaned });
+      const { store: shop, settings } = await api("/vendor/store/settings", { method: "PUT", body: cleaned });
+      setStore(shop);
       setSaved(settings);
       setForm(settings);
       setFeedback({ ok: true, message: "Changes saved." });
@@ -173,9 +179,26 @@ export default function SettingsPage() {
           </label>
         </div>
 
-        <div className="h-40 w-full bg-surface-container-high rounded-md flex items-center justify-center">
-          <MapPin size={28} className="text-on-surface-variant" />
-        </div>
+        {store?.location ? (
+          <div className="space-y-xs">
+            <Suspense fallback={<div className="h-56 w-full bg-surface-container-high rounded-md" />}>
+              <ShopAreaMap location={store.location} radiusKm={catalogLocation.radiusKm} shopName={store.name} />
+            </Suspense>
+            <p className="font-body text-body-sm text-on-surface-variant">
+              {store.locationLabel ? (
+                <>
+                  On the map at <strong className="text-on-surface">{store.locationLabel}</strong>.{" "}
+                </>
+              ) : null}
+              Customers inside the circle ({catalogLocation.radiusKm} km) can see your shop and order from it. If the pin is in
+              the wrong place, check the street and pincode and save.
+            </p>
+          </div>
+        ) : (
+          <div className="h-40 w-full bg-surface-container-high rounded-md flex items-center justify-center">
+            <MapPin size={28} className="text-on-surface-variant" />
+          </div>
+        )}
       </section>
 
       {/* Hours */}

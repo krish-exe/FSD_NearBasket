@@ -18,7 +18,7 @@ You need Node 20.6+ and MongoDB running locally (or a MongoDB Atlas connection s
    cd server
    npm install
    cp .env.example .env   # then edit it: MONGODB_URI, JWT_SECRET
-   npm run seed           # wipes and refills the database with the sample data
+   npm run seed           # wipes and refills the database with the sample shops and accounts (no orders)
    ```
 
 2. Start the API (from `server/`):
@@ -52,7 +52,7 @@ React (Vite)  ──fetch /api──▶  Express API (server/)  ──Mongoose�
                                     └─ OSRM: road route and distance from store to door
 ```
 
-- `server/src/models` — User, Store, Product (with stock), Offer, Order
+- `server/src/models` — User, Store, Product (with stock), Offer, Order, Image (product photos stored in the database; products link to them as `/api/images/<id>`)
 - `server/src/routes` — `auth` (signup, login, me), `catalog` (stores/products/offers, delivery estimate), `orders` (place, list, view), `vendor` (store orders and status, stock, shop settings)
 - `shared/pricing.js` — coupon and delivery-fee rules used by both the cart preview and the server, so the price shown is the price charged
 - Logins use a token (JWT) kept in the browser; passwords are hashed with bcrypt on the server
@@ -62,6 +62,7 @@ React (Vite)  ──fetch /api──▶  Express API (server/)  ──Mongoose�
 | Method | Path | Who | What |
 |---|---|---|---|
 | POST | `/api/auth/signup`, `/api/auth/login` | anyone | Create an account / log in; returns a token |
+| POST | `/api/auth/register-shop` | anyone | Create a store owner account and their shop (placed on the map from its address) |
 | GET | `/api/auth/me` | logged in | Current user |
 | GET | `/api/catalog` | anyone | Stores, products with stock, offers |
 | GET | `/api/delivery/estimate?storeIds=&area=` | anyone | Delivery minutes and distance per store |
@@ -69,7 +70,11 @@ React (Vite)  ──fetch /api──▶  Express API (server/)  ──Mongoose�
 | GET | `/api/orders/mine`, `/api/orders/:id` | customer | Order history / one order with its route |
 | GET | `/api/vendor/orders` | vendor | Orders for the vendor's store |
 | PATCH | `/api/vendor/orders/:id/status` | vendor | Accept → Out for Delivery → Delivered, or Cancel |
+| GET, POST | `/api/vendor/products` | vendor | The vendor's own products / add a product |
+| PUT, DELETE | `/api/vendor/products/:id` | vendor | Edit / remove a product |
 | PATCH | `/api/vendor/products/:id/stock` | vendor | Change stock |
+| POST, DELETE | `/api/vendor/images`, `/api/vendor/images/:id` | vendor | Upload a product photo (the file itself, JPG/PNG/WebP up to 1 MB) / discard an unused one |
+| GET | `/api/images/:id` | anyone | A stored photo |
 | GET, PUT | `/api/vendor/store`, `/api/vendor/store/settings` | vendor | Shop settings |
 
 ### Environment variables
@@ -97,13 +102,14 @@ Customer-facing (NearBasket):
 - `/orders` — Order history with details, arrival time and one-click reorder (requires login). Statuses change when the store updates them, and the page refreshes itself while an order is active
 - `/orders/:orderId/track` — Track Order: status timeline, arrival countdown, distance and a map of the route from the store to the delivery address
 - `/checkout` — Delivery address and payment (requires login), with the expected delivery time from each store. One cart can hold items from several stores: each store delivers separately with its own fee (Rs. 25 per store, and every delivery is free once the whole cart reaches Rs. 500), and checkout places one order per store. A coupon applies to the whole cart and its discount is shared between the stores
+- `/sell` — "Sell on NearBasket": a shop owner creates their account and shop in one form, then lands in the Vendor Hub to add products
 - `/login`, `/signup` — Accounts stored on the server. There is no payment gateway yet, so every payment method is marked Paid when the order is delivered
 
 The header search supports typing with autocomplete, voice search (Chrome/Edge, via the Web Speech API) and photo search (matches words in the photo's file name against the catalog).
 
 Vendor-facing (Vendor Hub, linked from "Sell on NearBasket" in the footer and from the account menu). It needs a store owner login, and each owner only sees their own store:
 - `/vendor` — Dashboard: active orders, low stock alerts, today's revenue, recent orders and best sellers
-- `/vendor/inventory` — The store's products with editable stock. Stock is shared with the shop: sold-out items can't be added to the cart, the server reduces stock when an order is placed, and puts it back if the order is cancelled
+- `/vendor/inventory` — The store's products: add, edit or remove them (name, unit, category, price, optional original price to show a deal, stock, and a photo uploaded from the device, shrunk in the browser to 800px WebP and saved in the database, or a web link) and change stock. Stock is shared with the shop: sold-out items can't be added to the cart, the server reduces stock when an order is placed, and puts it back if the order is cancelled
 - `/vendor/orders` — Orders placed with the store, with buttons to accept, send out, mark delivered or cancel
 - `/vendor/settings` — Shop settings with validation, saved to the store (shoppers see the new name, address and hours)
 
@@ -120,18 +126,18 @@ The Track Order map uses Leaflet with Esri's Light Gray Canvas tiles, which need
 ```
 src/                 React website
   api/           client.js — fetch wrapper that adds the login token
-  components/    Header, Footer, CartDrawer, DeliveryHeader, DeliveryMap, RequireAuth, RequireVendor, StoreCard, StatusBadge, VendorLayout
+  components/    Header, Footer, CartDrawer, DeliveryHeader, DeliveryMap, ProductFormModal, RequireAuth, RequireVendor, StoreCard, StatusBadge, VendorLayout
   context/       CatalogContext, AuthContext, CartContext (cart kept in the browser), OrderContext, InventoryContext
-  hooks/         useVoiceSearch, useDeliveryLocation, useNow, useVendorOrders
+  hooks/         useVoiceSearch, useDeliveryLocation, useNow, useVendorOrders, useVendorProducts
   utils/         imageSearch, orderStatus, storeHours
-  pages/         HomePage, StorePage, DealsPage, OffersPage, OrdersPage, TrackOrderPage, CheckoutPage, LoginPage, SignupPage, NotFoundPage
+  pages/         HomePage, StorePage, DealsPage, OffersPage, OrdersPage, TrackOrderPage, CheckoutPage, LoginPage, SignupPage, SellPage, NotFoundPage
   pages/vendor/  DashboardPage, InventoryPage, OrdersPage, SettingsPage
   data/          categories.js — category names and colours
 server/              Express API
   src/models/    Mongoose schemas
   src/routes/    API endpoints
-  src/services/  geo.js — address lookup, road routes and ETA
+  src/services/  geo.js — address lookup, road routes and ETA; shops.js — shop details rules and map placement; ids.js — readable ids
   src/data/      seedData.js — sample stores, products, offers, accounts and orders
   src/seed.js    loads the sample data
-shared/              pricing.js — used by both the website and the API
+shared/              pricing.js, categories.js — used by both the website and the API
 ```

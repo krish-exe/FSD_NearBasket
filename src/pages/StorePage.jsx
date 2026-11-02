@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useInventory, LOW_STOCK_THRESHOLD } from "../context/InventoryContext";
 import NotFoundPage from "./NotFoundPage";
+import { assetUrl } from "../api/client";
 
 export default function StorePage() {
   const { stores, products } = useCatalog();
@@ -92,7 +93,7 @@ export default function StorePage() {
     <main className="flex-grow w-full max-w-content mx-auto px-margin-mobile md:px-margin-desktop py-xl space-y-xl">
       {/* Store Hero Banner */}
       <section className="relative rounded-xl overflow-hidden h-[260px] md:h-[320px] shadow-card">
-        <img src={store.banner || store.image} alt={store.name} className="w-full h-full object-cover" />
+        <img src={assetUrl(store.banner || store.image)} alt={store.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         
         <div className="absolute bottom-0 left-0 p-lg md:p-xl flex items-center gap-md z-10">
@@ -106,7 +107,7 @@ export default function StorePage() {
             <div className="flex flex-wrap items-center gap-2 text-white/90 font-body text-body-sm mt-1">
               <span className="flex items-center gap-1 font-semibold text-secondary-container">
                 <Star size={14} className="fill-secondary-container text-secondary-container" />
-                {store.rating} ({store.reviews} reviews)
+                {store.rating ? `${store.rating} (${store.reviews} reviews)` : "New on NearBasket"}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -199,7 +200,7 @@ export default function StorePage() {
                     }`}
                   >
                     <div className="relative h-44 w-full bg-surface-container-low">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={assetUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                       {product.isDeal && (
                         <span className="absolute top-2 left-2 bg-secondary text-on-secondary text-xs font-bold px-2 py-0.5 rounded-full">
                           {product.dealTag || "DEAL"}

@@ -44,14 +44,13 @@ export default function VendorLayout() {
         </nav>
 
         <div className="flex flex-col gap-md pt-lg border-t border-outline-variant/20">
-          <button
-            disabled
-            title="Coming soon"
-            className="w-full flex items-center justify-center gap-2 bg-primary text-on-primary font-label text-label-md py-3 rounded-full shadow-sm opacity-40 cursor-not-allowed"
+          <Link
+            to="/vendor/inventory?add=1"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-on-primary font-label text-label-md py-3 rounded-full shadow-sm hover:bg-primary-container transition-colors"
           >
             <Plus size={18} />
             Add New Product
-          </button>
+          </Link>
           <button
             disabled
             title="Coming soon"

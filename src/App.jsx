@@ -13,6 +13,7 @@ import OrdersPage from "./pages/OrdersPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import SellPage from "./pages/SellPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import VendorLayout from "./components/VendorLayout";
 import DashboardPage from "./pages/vendor/DashboardPage";
@@ -66,6 +67,7 @@ export default function App() {
               <Route path="/checkout" element={<CustomerShell><RequireAuth><CheckoutPage /></RequireAuth></CustomerShell>} />
               <Route path="/login" element={<CustomerShell><LoginPage /></CustomerShell>} />
               <Route path="/signup" element={<CustomerShell><SignupPage /></CustomerShell>} />
+              <Route path="/sell" element={<CustomerShell><SellPage /></CustomerShell>} />
 
               <Route path="/vendor" element={<RequireVendor><VendorLayout /></RequireVendor>}>
                 <Route index element={<DashboardPage />} />

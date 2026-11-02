@@ -5,7 +5,7 @@ import { useCart, FREE_DELIVERY_FROM } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useOrders } from "../context/OrderContext";
 import { useDeliveryLocation, readLocationCoords } from "../hooks/useDeliveryLocation";
-import { api } from "../api/client";
+import { api, assetUrl } from "../api/client";
 import DeliveryHeader from "../components/DeliveryHeader";
 
 export default function CheckoutPage() {
@@ -273,7 +273,7 @@ export default function CheckoutPage() {
                   {delivery.items.map(({ product, qty }) => (
                     <div key={product.id} className="py-sm flex items-center justify-between gap-md">
                       <div className="flex items-center gap-sm">
-                        <img src={product.image} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
+                        <img src={assetUrl(product.image)} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
                         <div>
                           <p className="font-body text-body-sm font-semibold text-on-surface line-clamp-1">{product.name}</p>
                           <p className="font-body text-body-sm text-on-surface-variant">Qty: {qty}</p>

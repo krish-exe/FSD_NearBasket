@@ -6,6 +6,7 @@ import { useCatalog } from "../context/CatalogContext";
 import { useCart } from "../context/CartContext";
 import { useInventory } from "../context/InventoryContext";
 import StoreCard from "../components/StoreCard";
+import { assetUrl } from "../api/client";
 
 const isDeal = (p) => p.isDeal || p.originalPrice > p.price;
 
@@ -202,7 +203,7 @@ export default function DealsPage() {
                   className="bg-surface-container-lowest rounded-lg overflow-hidden shadow-card card-hover-lift border border-outline-variant/20 flex flex-col justify-between"
                 >
                   <div className="relative h-48 w-full bg-surface-container-low">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={assetUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                     
                     {/* Deal Badge */}
                     {isDeal(product) && (

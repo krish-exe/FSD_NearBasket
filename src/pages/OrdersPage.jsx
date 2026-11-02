@@ -7,6 +7,7 @@ import StatusBadge from "../components/StatusBadge";
 import { useCatalog } from "../context/CatalogContext";
 import { minutesUntilArrival, formatClock, ACTIVE_STATUSES } from "../utils/orderStatus";
 import { useNow } from "../hooks/useNow";
+import { assetUrl } from "../api/client";
 
 export default function OrdersPage() {
   const [searchParams] = useSearchParams();
@@ -157,7 +158,7 @@ export default function OrdersPage() {
                     {order.items.slice(0, 3).map((item, idx) => (
                       <img
                         key={idx}
-                        src={item.product.image}
+                        src={assetUrl(item.product.image)}
                         alt={item.product.name}
                         className="inline-block h-12 w-12 rounded-full ring-2 ring-surface object-cover"
                       />
@@ -222,7 +223,7 @@ export default function OrdersPage() {
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="py-sm flex items-center justify-between gap-md">
                       <div className="flex items-center gap-md">
-                        <img src={item.product.image} alt={item.product.name} className="w-10 h-10 rounded-md object-cover" />
+                        <img src={assetUrl(item.product.image)} alt={item.product.name} className="w-10 h-10 rounded-md object-cover" />
                         <div>
                           <p className="font-body text-body-sm font-semibold text-on-surface">{item.product.name}</p>
                           <p className="font-body text-body-sm text-on-surface-variant">{item.product.unit} x {item.qty}</p>

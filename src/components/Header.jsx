@@ -7,6 +7,7 @@ import { useVoiceSearch } from "../hooks/useVoiceSearch";
 import { saveLocationCoords, DEFAULT_LOCATION } from "../hooks/useDeliveryLocation";
 import { searchTermFromImage } from "../utils/imageSearch";
 import { useCatalog } from "../context/CatalogContext";
+import { assetUrl } from "../api/client";
 
 const POPULAR_LOCATIONS = [
   "Ghatkopar East, Mumbai",
@@ -394,7 +395,7 @@ export default function Header() {
                     className="w-full flex items-center gap-md p-md hover:bg-surface-container-low transition-colors text-left cursor-pointer"
                   >
                     <img
-                      src={product.image}
+                      src={assetUrl(product.image)}
                       alt={product.name}
                       className="w-12 h-12 rounded-md object-cover border border-outline-variant/30 shrink-0"
                     />

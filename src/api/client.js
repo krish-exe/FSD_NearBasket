@@ -57,3 +57,23 @@ export async function api(path, { method = "GET", body } = {}) {
   }
   return data;
 }
+
+// Pictures stored in the database have links like "/api/images/<id>"; point those at the API
+export const assetUrl = (src) => (src?.startsWith("/api/") ? `${BASE_URL}${src}` : src);
+
+// Uploads a picture file (a Blob) for a product; resolves to its image link
+export async function uploadImage(blob) {
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}/api/vendor/images`, {
+      method: "POST",
+      headers: { "Content-Type": blob.type, Authorization: `Bearer ${getToken()}` },
+      body: blob,
+    });
+  } catch {
+    throw new ApiError("Couldn't upload the photo. Check your connection and try again.", { status: 0 });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error || "Couldn't upload the photo.", { status: res.status });
+  return data.image;
+}

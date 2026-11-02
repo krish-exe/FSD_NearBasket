@@ -64,6 +64,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Creates a store owner account and their shop; resolves like signup
+  const registerShop = async (details) => {
+    try {
+      const session = await api("/auth/register-shop", { method: "POST", body: details });
+      startSession(session);
+      return { ok: true, user: session.user };
+    } catch (e) {
+      return { ok: false, field: e.field || "street", error: e.message };
+    }
+  };
+
   // Resolves to { ok: true, user } or { ok: false, field, error }
   const login = async (email, password) => {
     try {
@@ -77,7 +88,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoggedIn: !!user, isVendor: user?.role === "vendor", login, signup, logout }}
+      value={{ user, isLoggedIn: !!user, isVendor: user?.role === "vendor", login, signup, registerShop, logout }}
     >
       {children}
     </AuthContext.Provider>

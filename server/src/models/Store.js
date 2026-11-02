@@ -18,6 +18,8 @@ const storeSchema = new mongoose.Schema(
     location: point,
     // Neighbourhood shown when the shopper's distance is unknown
     area: String,
+    // Where the map lookup placed the shop, e.g. "400615, Thane, Thane Subdistrict"
+    locationLabel: String,
     // Vendor Hub "Shop Settings" form, kept as entered
     settings: { type: mongoose.Schema.Types.Mixed, default: null },
   },

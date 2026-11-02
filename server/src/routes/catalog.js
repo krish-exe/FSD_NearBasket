@@ -20,7 +20,8 @@ const formatDistance = (km) => (km < 1 ? `${Math.max(50, Math.round((km * 1000) 
  * Everything the shop pages need in one request: stores, products (with stock) and offers.
  * Given the shopper's location (?area=... or ?lat=..&lng=..) it only returns the stores
  * that deliver there, nearest first, with their distance and delivery time. If the
- * location can't be found, every store is returned so the shop still works.
+ * location can't be found on the map, no stores are returned (location.found is false)
+ * rather than showing shops that may be far away.
  */
 router.get("/catalog", async (req, res) => {
   const { area, lat, lng } = req.query;
@@ -31,7 +32,7 @@ router.get("/catalog", async (req, res) => {
     area || (lat && lng) ? locateAddress({ coords: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null, area }) : null,
   ]);
 
-  let stores;
+  let stores = [];
   if (here) {
     stores = allStores
       .map((store) => {
@@ -45,10 +46,6 @@ router.get("/catalog", async (req, res) => {
       })
       .filter((store) => store.distanceKm <= DELIVERY_RADIUS_KM)
       .sort((a, b) => a.distanceKm - b.distanceKm);
-  } else {
-    stores = allStores
-      .map((store) => ({ ...store.toJSON(), distance: store.area || "", delivery: store.delivery }))
-      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   const storeIds = new Set(stores.map((s) => s.id));

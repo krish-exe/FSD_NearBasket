@@ -1,30 +1,31 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, AlertTriangle, Wallet } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
-import { useCatalog } from "../../context/CatalogContext";
-import { useAuth } from "../../context/AuthContext";
-import { useInventory, LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
+import { api } from "../../api/client";
+import { LOW_STOCK_THRESHOLD } from "../../context/InventoryContext";
+import { useVendorProducts } from "../../hooks/useVendorProducts";
 import { useVendorOrders, unitCount } from "../../hooks/useVendorOrders";
 import { useNow } from "../../hooks/useNow";
 import { ACTIVE_STATUSES } from "../../utils/orderStatus";
 
 export default function DashboardPage() {
   const { orders } = useVendorOrders();
-  const { products, stores } = useCatalog();
-  const { user } = useAuth();
-  const vendorStoreId = user.storeId;
-  const { stockFor } = useInventory();
+  const { products } = useVendorProducts();
   const now = useNow();
-  const shopName = stores.find((s) => s.id === vendorStoreId)?.name || "your store";
+  const [shopName, setShopName] = useState("");
+
+  useEffect(() => {
+    api("/vendor/store")
+      .then(({ store }) => setShopName(store.name))
+      .catch(() => {});
+  }, []);
 
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
   const today = new Date(now).toDateString();
   const todaysOrders = orders.filter((o) => new Date(o.date).toDateString() === today);
   const todaysRevenue = todaysOrders.reduce((sum, o) => sum + o.total, 0);
-  const lowStockCount = products.filter((p) => {
-    const left = stockFor(p.id);
-    return p.storeId === vendorStoreId && left !== null && left <= LOW_STOCK_THRESHOLD;
-  }).length;
+  const lowStockCount = products.filter((p) => p.stock != null && p.stock <= LOW_STOCK_THRESHOLD).length;
 
   // Units sold per product across all of this store's orders
   const soldByProduct = {};
@@ -69,7 +70,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-xl">
       <div>
-        <h1 className="font-display text-display-lg-mobile text-on-surface mb-xs">Welcome back, {shopName}</h1>
+        <h1 className="font-display text-display-lg-mobile text-on-surface mb-xs">Welcome back{shopName && `, ${shopName}`}</h1>
         <p className="font-body text-body-lg text-on-surface-variant">Here's what's happening in your neighborhood market today.</p>
       </div>
 

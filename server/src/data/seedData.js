@@ -575,7 +575,7 @@ export const vendorAccounts = [
   { name: "Harpreet Singh", email: "punjabi@nearbasket.test", phone: "9876500033", storeId: "punjabi-spice-bazaar" },
 ];
 
-// Owner of the sample order history below
+// A ready-made customer login for demos
 export const demoCustomer = { name: "Priya Patel", email: "priya@example.com", phone: "9123456780" };
 
 // Starting stock for Sharma General Store's products. Only these products are stock-tracked;
@@ -589,86 +589,3 @@ export const initialStock = {
   "whole-wheat-atta": 0,
   "surface-cleaner": 9,
 };
-
-export const initialOrders = [
-  {
-    id: "NB-8492",
-    date: "2026-10-02T18:30:00.000Z",
-    formattedDate: "02 Oct 2026, 06:30 PM",
-    customer: "Priya Patel",
-    email: "priya@example.com",
-    storeName: "Green Valley Organics",
-    storeId: "green-valley-organics",
-    items: [
-      {
-        product: {
-          id: "apples-red",
-          name: "Organic Red Apples",
-          unit: "1 kg",
-          price: 180,
-          image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      },
-      {
-        product: {
-          id: "sourdough-artisan",
-          name: "Artisan Sourdough Loaf",
-          unit: "1 loaf (400g)",
-          price: 149,
-          image: "https://images.unsplash.com/photo-1585478259715-4d3a5f5b8b9a?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      }
-    ],
-    subtotal: 329,
-    discount: 50,
-    deliveryFee: 25,
-    total: 304,
-    offerCode: "NEAR50",
-    paymentMethod: "UPI (Google Pay)",
-    paymentStatus: "Paid",
-    status: "Delivered",
-    address: "Flat 402, Sunshine Apartments, Ghatkopar East, Mumbai"
-  },
-  {
-    id: "NB-8491",
-    date: "2026-09-28T14:15:00.000Z",
-    formattedDate: "28 Sep 2026, 02:15 PM",
-    customer: "Priya Patel",
-    email: "priya@example.com",
-    storeName: "Sharma General Store",
-    storeId: "sharma-general-store",
-    items: [
-      {
-        product: {
-          id: "basmati-rice",
-          name: "Premium Aged Basmati Rice",
-          unit: "5 kg bag",
-          price: 649,
-          image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=600&auto=format&fit=crop"
-        },
-        qty: 1
-      },
-      {
-        product: {
-          id: "roasted-almonds",
-          name: "California Roasted Almonds",
-          unit: "250g pack",
-          price: 299,
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Almonds_1.jpg/500px-Almonds_1.jpg"
-        },
-        qty: 1
-      }
-    ],
-    subtotal: 948,
-    discount: 0,
-    deliveryFee: 25,
-    total: 973,
-    offerCode: null,
-    paymentMethod: "Cash on Delivery",
-    paymentStatus: "Paid",
-    status: "Delivered",
-    address: "Flat 402, Sunshine Apartments, Ghatkopar East, Mumbai"
-  }
-];

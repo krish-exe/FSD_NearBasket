@@ -34,14 +34,22 @@ function knownArea(text) {
   return area ? { lat: area.lat, lng: area.lng } : null;
 }
 
-async function nominatim(query) {
-  if (geocodeCache.has(query)) return geocodeCache.get(query);
-  const url = `${NOMINATIM_URL}/search?format=json&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`;
+/**
+ * One Nominatim search: free text ("Tilak Road, Mumbai") or, with { postalcode },
+ * a pincode-only lookup. Resolves to { lat, lng, label } or null when nothing matches.
+ */
+async function nominatim(query, { postalcode = false } = {}) {
+  const key = `${postalcode ? "pin" : "q"}:${query}`;
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  const url = `${NOMINATIM_URL}/search?format=json&limit=1&countrycodes=in&${postalcode ? "postalcode" : "q"}=${encodeURIComponent(query)}`;
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`Nominatim ${res.status}`);
   const [hit] = await res.json();
-  const point = hit ? { lat: Number(hit.lat), lng: Number(hit.lon) } : null;
-  geocodeCache.set(query, point);
+  // label: the first few parts of the place name, e.g. "400615, Thane, Thane Subdistrict"
+  const point = hit
+    ? { lat: Number(hit.lat), lng: Number(hit.lon), label: hit.display_name.split(", ").slice(0, 3).join(", ") }
+    : null;
+  geocodeCache.set(key, point);
   return point;
 }
 
@@ -59,8 +67,11 @@ export async function locateAddress({ coords, address, area: label }) {
   // "Home - Near Ghatkopar East, Mumbai" -> "Ghatkopar East, Mumbai"
   const area = label?.replace(/^(home|work|other)\s*-\s*/i, "").replace(/^near\s+/i, "");
   const offline = knownArea(`${address || ""} ${area || ""}`);
+  // A 6-digit pincode anywhere in the area is the most reliable thing to look up
+  const pincode = area?.match(/\b\d{6}\b/)?.[0];
   try {
-    const areaPoint = (area && (await nominatim(area))) || offline;
+    const areaPoint =
+      (pincode && (await nominatim(pincode, { postalcode: true }))) || (area && (await nominatim(area))) || offline;
     if (!areaPoint || !address) return areaPoint;
     const streetPoint = await nominatim(`${address}, ${area}`);
     return streetPoint && straightLineKm(streetPoint, areaPoint) <= MAX_STREET_OFFSET_KM ? streetPoint : areaPoint;
@@ -73,6 +84,18 @@ export async function locateAddress({ coords, address, area: label }) {
 export async function geocodeExact(query) {
   try {
     return await nominatim(query);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Centre of an Indian pincode area, or null. Searched on its own because a text search
+ * like "400615, Mumbai" ignores the pincode and returns the middle of Mumbai.
+ */
+export async function geocodePincode(pincode) {
+  try {
+    return await nominatim(pincode, { postalcode: true });
   } catch {
     return null;
   }
