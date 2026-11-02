@@ -1,0 +1,22 @@
+# Render Blueprint for the NearBasket API (New > Blueprint in the Render dashboard).
+# Values marked "sync: false" are asked for when the Blueprint is created.
+services:
+  - type: web
+    name: nearbasket-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SEED_PASSWORD
+        sync: false
+      - key: DELIVERY_RADIUS_KM
+        value: "5"

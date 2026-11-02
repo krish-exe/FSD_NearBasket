@@ -10,7 +10,7 @@ A MERN app (MongoDB, Express, React, Node) for NearBasket / Vendor Hub: a React 
 
 ## Run it
 
-You need Node 20.6+ and MongoDB running locally (or a MongoDB Atlas connection string).
+You need Node 22.9+ and MongoDB running locally (or a MongoDB Atlas connection string).
 
 1. Set up the server once:
 
@@ -40,8 +40,38 @@ Then open http://localhost:5173. During development Vite forwards `/api` request
 
 All seeded accounts use the `SEED_PASSWORD` from `server/.env` (`Demo@1234` in `.env.example`).
 
-- Customer with past orders: `priya@example.com`
+- Customer: `priya@example.com`
 - Store owners (Vendor Hub): `sharma@nearbasket.test`, `greenvalley@nearbasket.test`, `freshmart@nearbasket.test`, `punjabi@nearbasket.test`
+
+## Deploy
+
+The three parts are hosted separately, all on free plans:
+
+| Part | Host | What it runs |
+|---|---|---|
+| Database | MongoDB Atlas (M0 free cluster) | MongoDB |
+| API | Render (free web service) | `server/` — Express on Node |
+| Website | Vercel | the Vite build of `src/` |
+
+1. **Database (MongoDB Atlas)**
+   - Create a free M0 cluster.
+   - Under *Database Access*, add a database user with a password.
+   - Under *Network Access*, allow `0.0.0.0/0` (Render's free plan has no fixed IP address).
+   - Copy the connection string from *Connect → Drivers* and add the database name before the `?`, e.g. `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/nearbasket?retryWrites=true&w=majority`.
+   - Load the starting data from your computer: put that string in `server/.env` as `MONGODB_URI` and run `npm run seed` in `server/`.
+2. **API (Render)**
+   - In Render, choose *New → Blueprint* and pick this GitHub repository; `render.yaml` sets everything up.
+   - When asked, fill in `MONGODB_URI` (the Atlas string), `SEED_PASSWORD`, and `CLIENT_ORIGIN` (the Vercel address from step 3; put any placeholder first and update it afterwards).
+   - Render generates `JWT_SECRET` itself.
+   - Once it's live, `https://<your-api>.onrender.com/api/health` answers `{"ok":true}`.
+   - The free plan sleeps after 15 minutes without visitors, so the first request after that takes about a minute.
+3. **Website (Vercel)**
+   - In Vercel, choose *Add New → Project* and import this repository. Vercel detects Vite (build `npm run build`, output `dist`).
+   - Add the environment variable `VITE_API_URL` = `https://<your-api>.onrender.com` and deploy.
+   - `vercel.json` makes page links like `/orders/NB-123/track` work when opened directly.
+4. Put the Vercel address (e.g. `https://nearbasket.vercel.app`) into Render's `CLIENT_ORIGIN` so the API accepts requests from the website. Render redeploys by itself.
+
+Both Render and Vercel redeploy automatically whenever the deployed branch on GitHub changes.
 
 ## How it fits together
 
